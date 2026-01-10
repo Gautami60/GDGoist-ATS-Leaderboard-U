@@ -1,6 +1,6 @@
 # GDGoist ATS Leaderboard - Quick Start Guide
 
-## 🚀 Running the Application
+## Running the Application
 
 ### Prerequisites
 - Node.js 16+
@@ -42,7 +42,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 📱 User Flows
+## User Flows
 
 ### 1. Student Registration & Onboarding
 1. Visit http://localhost:5173/
@@ -74,7 +74,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 🔑 Test Credentials
+## Test Credentials
 
 ### Student Account
 - Email: student@university.edu
@@ -86,7 +86,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 📊 API Endpoints
+## API Endpoints
 
 ### Authentication
 - `POST /auth/register` - Register new user
@@ -114,7 +114,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 🎨 UI Components
+## UI Components
 
 ### Key Pages
 - **LandingPage** - Hero section with features and CTA
@@ -134,7 +134,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables (.env)
 
@@ -157,7 +157,7 @@ SBERT_MODEL=all-MiniLM-L6-v2
 
 ---
 
-## 📈 Performance Metrics
+## Performance Metrics
 
 - **API Response Time:** <500ms
 - **SBERT Model Load Time:** ~2 seconds
@@ -167,7 +167,7 @@ SBERT_MODEL=all-MiniLM-L6-v2
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Frontend shows blank page
 - Clear browser cache (Ctrl+F5)
@@ -191,7 +191,7 @@ SBERT_MODEL=all-MiniLM-L6-v2
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **PHASE_1_COMPLETION.md** - Phase 1 status and features
 - **ARCHITECTURE.md** - System architecture
@@ -200,7 +200,7 @@ SBERT_MODEL=all-MiniLM-L6-v2
 
 ---
 
-## ✅ Phase 1 Checklist
+## Phase 1 Checklist
 
 - ✅ Authentication & Authorization
 - ✅ Resume Upload & Storage

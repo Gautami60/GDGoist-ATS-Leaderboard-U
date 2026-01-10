@@ -2,7 +2,7 @@
 
 A comprehensive Applicant Tracking System (ATS) leaderboard platform for GDG (Google Developer Groups) that analyzes resumes, tracks employability scores, and enables peer networking among developers.
 
-## 🎯 Project Overview
+## Project Overview
 
 The GDGoist ATS Leaderboard is a three-phase project designed to help developers improve their professional profiles through resume analysis, GitHub integration, and community engagement.
 
@@ -10,9 +10,9 @@ The GDGoist ATS Leaderboard is a three-phase project designed to help developers
 
 ---
 
-## 📋 Phase 1: Core ATS & Resume Analysis
+## Phase 1: Core ATS & Resume Analysis
 
-### Features Implemented ✅
+### Features Implemented
 
 **Authentication & User Management**
 - User registration with email validation
@@ -70,9 +70,9 @@ POST   /onboarding             - Complete onboarding
 
 ---
 
-## 🏆 Phase 2: Leaderboard & GitHub Integration
+## Phase 2: Leaderboard & GitHub Integration
 
-### Features Implemented ✅
+### Features Implemented
 
 **Leaderboard System**
 - Public anonymous leaderboard
@@ -119,9 +119,9 @@ GET    /github/profile         - Get GitHub profile
 
 ---
 
-## 🎮 Phase 3: Gamification & Peer Discovery
+## Phase 3: Gamification & Peer Discovery
 
-### Features Implemented ✅
+### Features Implemented
 
 **Badge System**
 - 10+ achievement badges
@@ -166,7 +166,7 @@ GET    /skillgap/peers         - Compare with peers
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js 16+
@@ -176,13 +176,13 @@ GET    /skillgap/peers         - Compare with peers
 
 ### Installation
 
-1. **Clone the repository**
+1. Clone the repository
 ```bash
 git clone https://github.com/Simrangupta2105/GDGoist-ATS-Leaderboard.git
 cd GDGoist-ATS-Leaderboard-main
 ```
 
-2. **Setup Backend**
+2. Setup Backend
 ```bash
 cd backend
 npm install
@@ -191,26 +191,26 @@ cp .env.example .env
 npm start
 ```
 
-3. **Setup Frontend**
+3. Setup Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-4. **Setup MongoDB**
+4. Setup MongoDB
 ```bash
 docker run -d -p 27017:27017 --name mongodb mongo:latest
 ```
 
-5. **Access the application**
+5. Access the application
 - Frontend: http://localhost:5173/
 - Backend API: http://localhost:4000/
 - MongoDB: localhost:27017
 
 ---
 
-## 📊 Data Models
+## Data Models
 
 ### User
 ```javascript
@@ -288,21 +288,21 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 🎨 UI/UX Features
+## UI/UX Features
 
-**Dark Mode**
+Dark Mode
 - System preference detection
 - Manual toggle in navbar
 - Persistent theme preference
 - Smooth transitions
 
-**Responsive Design**
+Responsive Design
 - Mobile-first approach
 - Tailwind CSS framework
 - Gradient cards
 - Smooth animations
 
-**Components**
+Components
 - Authentication pages (Login/Register)
 - Resume upload with drag-and-drop
 - ATS results display
@@ -314,7 +314,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 🔒 Security Features
+## Security Features
 
 - JWT token-based authentication
 - Password hashing with bcrypt
@@ -327,7 +327,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 📈 Performance Metrics
+## Performance Metrics
 
 - Resume Analysis: 2-3 seconds
 - Skill Detection Accuracy: 90%
@@ -339,7 +339,7 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 🛠️ Tech Stack Summary
+## Tech Stack Summary
 
 **Frontend**
 - React 18
@@ -369,9 +369,9 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 
 ---
 
-## 📝 Environment Variables
+## Environment Variables
 
-### Backend (.env)
+Backend (.env)
 ```
 MONGO_URI=mongodb://localhost:27017/gdgoist-ats
 JWT_SECRET=your_jwt_secret_key
@@ -385,7 +385,7 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 
 ---
 
-## 🚦 Project Status
+## Project Status
 
 | Phase | Status | Completion |
 |-------|--------|-----------|
@@ -395,7 +395,7 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 
 ---
 
-## 📚 API Documentation
+## API Documentation
 
 ### Authentication
 - All protected endpoints require JWT token in Authorization header
@@ -418,7 +418,7 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
@@ -428,21 +428,13 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
-## 👥 Team
-
-**Developed by:** GDG Community
-
-**Project Lead:** Simran Gupta
-
----
-
-## 📞 Support
+## Support
 
 For issues, questions, or suggestions:
 - Open an issue on GitHub
@@ -450,7 +442,7 @@ For issues, questions, or suggestions:
 
 ---
 
-## 🎓 Learning Resources
+## Learning Resources
 
 - [Resume Best Practices](https://www.indeed.com/career-advice/resumes)
 - [GitHub Profile Optimization](https://docs.github.com/en/github)
@@ -458,9 +450,9 @@ For issues, questions, or suggestions:
 
 ---
 
-## 🔄 Version History
+## Version History
 
-**v1.0.0** - Initial Release
+v1.0.0 - Initial Release
 - All 3 phases implemented
 - 85-90% accuracy
 - Production-ready
