@@ -2,6 +2,7 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
+import gdgLogo from '../assets/gdg-logo.png'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -10,57 +11,102 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path
 
   return (
-    <nav className="bg-white dark:bg-slate-800 shadow-soft sticky top-0 z-50 border-b border-gray-200 dark:border-slate-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav
+      className="sticky top-0 z-50 backdrop-blur-sm"
+      style={{
+        backgroundColor: 'rgba(var(--bg-primary-rgb, 250, 249, 247), 0.8)',
+        borderBottom: '1px solid var(--border-color)'
+      }}
+    >
+      <div className="container-premium">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center group-hover:shadow-medium transition-all">
-              <span className="text-white font-bold text-lg">G</span>
+          {/* Logo Section - Left Aligned */}
+          <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            {/* GDG Logo Image - Subtle, Non-Dominant */}
+            <img
+              src={gdgLogo}
+              alt="GDG Logo"
+              className="h-8 w-8 object-contain flex-shrink-0 opacity-75"
+            />
+
+            {/* Product Branding */}
+            <div className="flex flex-col leading-tight">
+              <span
+                className="text-base font-semibold tracking-tight"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                ATS Leaderboard
+              </span>
+              <span
+                className="text-xs font-normal"
+                style={{ color: 'var(--text-muted)', opacity: 0.65 }}
+              >
+                GDG on Campus OIST
+              </span>
             </div>
-            <h1 className="text-xl font-bold gradient-text">GDGoist ATS</h1>
           </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex gap-2">
+          {/* Navigation Links - Minimal */}
+          <div className="hidden md:flex items-center gap-1">
             <Link
               to="/dashboard"
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                isActive('/dashboard')
-                  ? 'bg-gradient-primary text-white shadow-soft'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium text-small transition-all ${isActive('/dashboard')
+                ? 'bg-caramel text-white'
+                : 'hover:bg-opacity-5 hover:bg-caramel'
+                }`}
+              style={!isActive('/dashboard') ? { color: 'var(--text-secondary)' } : {}}
             >
-              📊 Dashboard
+              Dashboard
             </Link>
             <Link
               to="/leaderboard"
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                isActive('/leaderboard')
-                  ? 'bg-gradient-primary text-white shadow-soft'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium text-small transition-all ${isActive('/leaderboard')
+                ? 'bg-caramel text-white'
+                : 'hover:bg-opacity-5 hover:bg-caramel'
+                }`}
+              style={!isActive('/leaderboard') ? { color: 'var(--text-secondary)' } : {}}
             >
-              🏆 Leaderboard
+              Leaderboard
             </Link>
+            {/* Admin Dashboard - Only for admin users */}
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin"
+                className={`px-4 py-2 rounded-lg font-medium text-small transition-all ${isActive('/admin')
+                  ? 'bg-caramel text-white'
+                  : 'hover:bg-opacity-5 hover:bg-caramel'
+                  }`}
+                style={!isActive('/admin') ? { color: 'var(--text-secondary)' } : {}}
+              >
+                Admin
+              </Link>
+            )}
           </div>
 
-          {/* User Section */}
+          {/* User Section - Understated */}
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-primary rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
-                  {user?.name?.charAt(0)?.toUpperCase()}
-                </span>
+
+            {/* User Info - Subtle */}
+            <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+                style={{ backgroundColor: '#84592B' }}
+              >
+                {user?.name?.charAt(0)?.toUpperCase()}
               </div>
-              <span className="text-slate-700 dark:text-slate-200 font-medium">{user?.name}</span>
+              <span className="text-small font-medium" style={{ color: 'var(--text-secondary)' }}>
+                {user?.name}
+              </span>
             </div>
+
+            {/* Logout - Minimal */}
             <button
               onClick={logout}
-              className="btn-primary text-sm"
+              className="text-small font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-opacity-5 hover:bg-wine"
+              style={{ color: 'var(--text-muted)' }}
             >
-              🚪 Logout
+              Sign out
             </button>
           </div>
         </div>

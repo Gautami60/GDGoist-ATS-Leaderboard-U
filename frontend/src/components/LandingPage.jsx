@@ -1,119 +1,240 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import gdgLogo from '../assets/gdg-logo.png'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Hero Section */}
-        <div className="pt-20 pb-24 text-center animate-fadeIn">
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 dark:text-white mb-6">
-            GDGoist{' '}
-            <span className="gradient-text">ATS Leaderboard</span>
-          </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8">
-            Improve your employability with AI-powered resume analysis and compete with your peers
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/register" className="btn-primary">
-              🚀 Get Started
+      <header className="border-b" style={{ borderColor: 'var(--border-color)' }}>
+        <div className="container-premium py-4">
+          <div className="flex justify-between items-center">
+            {/* GDG Logo - Static Image */}
+            <div className="flex items-center gap-3">
+              <img
+                src={gdgLogo}
+                alt="GDG Logo"
+                className="h-8 w-8 object-contain flex-shrink-0 opacity-75"
+              />
+              <div className="flex flex-col leading-tight">
+                <span
+                  className="text-base font-semibold tracking-tight"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  ATS Leaderboard
+                </span>
+                <span
+                  className="text-xs font-normal"
+                  style={{ color: 'var(--text-muted)', opacity: 0.65 }}
+                >
+                  GDG on Campus OIST
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link
+                to="/login"
+                className="text-small font-medium hover:opacity-70 transition-opacity"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Sign in
+              </Link>
+              <Link to="/register" className="btn-primary">
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section - Calm, Institutional */}
+      <section className="py-20 md:py-32">
+        <div className="container-premium">
+          <div className="max-w-3xl mx-auto text-center animate-fadeIn">
+            <h1 className="text-display mb-6" style={{ color: 'var(--text-primary)' }}>
+              AI-Powered Career Readiness Platform
+            </h1>
+            <p className="text-heading font-normal mb-8" style={{ color: 'var(--text-secondary)' }}>
+              Understand your employability. Get personalized insights. Track your progress.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/register" className="btn-primary text-base px-8 py-3">
+                Start Your Analysis
+              </Link>
+              <Link to="/leaderboard" className="btn-secondary text-base px-8 py-3">
+                View Leaderboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works - Clear, Simple */}
+      <section className="py-20 border-t" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+        <div className="container-premium">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-heading text-center mb-16" style={{ color: 'var(--text-primary)' }}>
+              How It Works
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              {/* Step 1 */}
+              <div className="text-center">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: 'rgba(132, 89, 43, 0.1)' }}
+                >
+                  <span className="text-xl font-bold" style={{ color: '#84592B' }}>1</span>
+                </div>
+                <h3 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Upload Your Resume
+                </h3>
+                <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+                  Our AI analyzes your resume against industry standards and job requirements
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="text-center">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: 'rgba(132, 89, 43, 0.1)' }}
+                >
+                  <span className="text-xl font-bold" style={{ color: '#84592B' }}>2</span>
+                </div>
+                <h3 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Get AI Insights
+                </h3>
+                <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+                  Receive personalized recommendations and understand what employers look for
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="text-center">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: 'rgba(132, 89, 43, 0.1)' }}
+                >
+                  <span className="text-xl font-bold" style={{ color: '#84592B' }}>3</span>
+                </div>
+                <h3 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Track Progress
+                </h3>
+                <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+                  Monitor your improvement over time and benchmark against your peers
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features - Minimal, Credible */}
+      <section className="py-20">
+        <div className="container-premium">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-heading text-center mb-16" style={{ color: 'var(--text-primary)' }}>
+              What You Get
+            </h2>
+            <div className="space-y-8">
+              {/* Feature 1 */}
+              <div className="card-premium hover-lift">
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'rgba(132, 89, 43, 0.1)' }}
+                  >
+                    <svg className="w-5 h-5" style={{ color: '#84592B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                      ATS Compatibility Analysis
+                    </h3>
+                    <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+                      Understand how well your resume performs with Applicant Tracking Systems used by most companies
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="card-premium hover-lift">
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'rgba(132, 89, 43, 0.1)' }}
+                  >
+                    <svg className="w-5 h-5" style={{ color: '#84592B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                      Personalized Recommendations
+                    </h3>
+                    <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+                      AI-powered insights tailored to your profile, helping you understand exactly what to improve
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="card-premium hover-lift">
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'rgba(132, 89, 43, 0.1)' }}
+                  >
+                    <svg className="w-5 h-5" style={{ color: '#84592B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                      Progress Tracking
+                    </h3>
+                    <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+                      Monitor your employability score over time and see how you compare with your peers
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section - Calm */}
+      <section className="py-20 border-t" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+        <div className="container-premium">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-heading mb-4" style={{ color: 'var(--text-primary)' }}>
+              Ready to understand your career readiness?
+            </h2>
+            <p className="text-body mb-8" style={{ color: 'var(--text-muted)' }}>
+              Join students who are taking control of their employability
+            </p>
+            <Link to="/register" className="btn-primary text-base px-8 py-3">
+              Get Started
             </Link>
-            <Link to="/leaderboard" className="btn-secondary">
-              🏆 View Leaderboard
-            </Link>
           </div>
         </div>
+      </section>
 
-        {/* Features Section */}
-        <div className="py-20">
-          <h2 className="text-4xl font-bold text-center text-slate-900 dark:text-white mb-16">Why Choose Us?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="card-hover card-gradient p-8 animate-slideInLeft dark:bg-slate-800 dark:border-slate-700">
-              <div className="text-4xl mb-4">📄</div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Smart Analysis</h3>
-              <p className="text-slate-600 dark:text-slate-300">
-                AI-powered resume analysis using advanced SBERT technology for accurate job matching
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="card-hover card-gradient p-8 animate-fadeIn dark:bg-slate-800 dark:border-slate-700" style={{ animationDelay: '0.2s' }}>
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Real-time Scoring</h3>
-              <p className="text-slate-600 dark:text-slate-300">
-                Get instant feedback on your resume with actionable improvements and detailed insights
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="card-hover card-gradient p-8 animate-slideInRight dark:bg-slate-800 dark:border-slate-700">
-              <div className="text-4xl mb-4">🏅</div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Compete & Learn</h3>
-              <p className="text-slate-600 dark:text-slate-300">
-                Climb the leaderboard and benchmark your skills against your peers in real-time
-              </p>
-            </div>
+      {/* Footer */}
+      <footer className="py-8 border-t" style={{ borderColor: 'var(--border-color)' }}>
+        <div className="container-premium">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <GDGLogo size="sm" showText={true} variant="full" />
+            <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+              © 2026 ATS Leaderboard. All rights reserved.
+            </p>
           </div>
         </div>
-
-        {/* Stats Section */}
-        <div className="py-20 bg-gradient-primary dark:bg-gradient-to-r dark:from-slate-800 dark:to-slate-700 rounded-2xl px-8 text-white text-center">
-          <h2 className="text-3xl font-bold mb-12">Our Impact</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="animate-float">
-              <div className="text-5xl font-bold mb-2">1000+</div>
-              <p className="text-lg opacity-90">Active Users</p>
-            </div>
-            <div className="animate-float" style={{ animationDelay: '0.5s' }}>
-              <div className="text-5xl font-bold mb-2">50K+</div>
-              <p className="text-lg opacity-90">Resumes Analyzed</p>
-            </div>
-            <div className="animate-float" style={{ animationDelay: '1s' }}>
-              <div className="text-5xl font-bold mb-2">95%</div>
-              <p className="text-lg opacity-90">Accuracy Rate</p>
-            </div>
-          </div>
-        </div>
-
-        {/* How It Works */}
-        <div className="py-20">
-          <h2 className="text-4xl font-bold text-center text-slate-900 dark:text-white mb-16">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
-                1
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Sign Up</h3>
-              <p className="text-slate-600 dark:text-slate-300">Create your account and complete your profile</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-secondary rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
-                2
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Upload Resume</h3>
-              <p className="text-slate-600 dark:text-slate-300">Upload your resume for AI-powered analysis</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-tertiary rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
-                3
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Compete</h3>
-              <p className="text-slate-600 dark:text-slate-300">Climb the leaderboard and improve your score</p>
-            </div>
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="py-20 text-center">
-          <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-6">Ready to Get Started?</h2>
-          <p className="text-xl text-slate-600 dark:text-slate-300 mb-8">Join thousands of students improving their employability</p>
-          <Link to="/register" className="btn-primary inline-block">
-            Start Your Journey Now →
-          </Link>
-        </div>
-      </div>
+      </footer>
     </div>
   )
 }
