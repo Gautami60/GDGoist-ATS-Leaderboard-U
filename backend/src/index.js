@@ -8,6 +8,8 @@ const { connect } = require('./db')
 const app = express()
 const bcrypt = require('bcryptjs')
 const User = require('./models/user.model')
+const Resume = require('./models/resume.model')
+const { recalculateUserScore } = require('./scoreService')
 const { generateToken, verifyToken, requireRole } = require('./middleware/auth')
 const { requireOnboarded } = require('./middleware/onboarding')
 const { requireConsent } = require('./middleware/consent')
@@ -363,7 +365,6 @@ app.get('/me', verifyToken, async (req, res) => {
 })
 
 const { generateUploadUrl } = require('./s3')
-const Resume = require('./models/resume.model')
 const Score = require('./models/score.model')
 const GitHub = require('./models/github.model')
 const Badge = require('./models/badge.model')
@@ -373,7 +374,7 @@ const { getAuthorizationUrl, getAccessToken, syncGitHubData } = require('./githu
 const { checkAndAwardBadges, getUserBadges, calculateBadgeScore } = require('./badges')
 
 // PHASE 2: Centralized Services
-const { recalculateUserScore, getScoreBreakdown } = require('./scoreService')
+const { getScoreBreakdown } = require('./scoreService')
 const { startScheduler: startGitHubScheduler, triggerUserSync } = require('./githubScheduler')
 
 // PHASE 3: Admin Intelligence & Privacy
@@ -1292,29 +1293,47 @@ app.post('/resumes/parse', verifyToken, async (req, res) => {
       }
     }
 
-    // CRITICAL FIX: Save resume to database and recalculate score
+    // CRITICAL: Save resume to database - EVERY upload creates a NEW document
+    // This ensures ATS analysis is ALWAYS fresh per resume upload
+
+    // Generate unique resumeId for this upload event (outside try for response access)
+    const resumeId = `resume_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
     try {
-      // Save resume with ATS score
-      await Resume.create({
+      console.log(`[ATS] NEW RESUME UPLOAD - Creating fresh analysis record`)
+      console.log(`[ATS] Resume ID: ${resumeId}`)
+      console.log(`[ATS] User ID: ${req.user.id}`)
+      console.log(`[ATS] Filename: ${file.name}`)
+      console.log(`[ATS] ATS Score: ${finalScore}`)
+      console.log(`[ATS] Skills detected: ${detectedSkills.length}`)
+
+      // Create NEW resume document (never overwrite previous ones)
+      const resumeDoc = await Resume.create({
         user: req.user.id,
-        filename: file.name,
-        s3Key: `temp/${file.name}`, // Placeholder
+        originalFilename: file.name,
+        contentType: file.mimetype,
+        size: file.size,
+        fileKey: resumeId,
+        rawText: fileContent.substring(0, 10000), // Store first 10k chars
         status: 'scored',
         atsScore: finalScore,
         parsedSkills: detectedSkills,
         uploadedAt: new Date()
       })
 
-      // Recalculate composite employability score
-      await recalculateUserScore(req.user.id)
+      console.log(`[ATS] Resume document created: ${resumeDoc._id}`)
 
-      console.log(`[Score] Resume saved and score recalculated for user ${req.user.id}`)
+      // Recalculate composite employability score
+      const scoreResult = await recalculateUserScore(req.user.id)
+      console.log(`[Score] User ${req.user.id} score recalculated: ${scoreResult.totalScore}`)
+
     } catch (saveErr) {
-      console.error('Error saving resume or recalculating score:', saveErr)
+      console.error('[ATS] Error saving resume or recalculating score:', saveErr)
       // Don't fail the request, but log the error
     }
 
     return res.json({
+      resumeId, // Unique identifier for this analysis
       rawText: fileContent.substring(0, 2000),
       parsedSkills: detectedSkills,
       skillsByCategory,
@@ -1372,8 +1391,8 @@ app.get('/score/breakdown', verifyToken, async (req, res) => {
 app.get('/me/resume', verifyToken, async (req, res) => {
   try {
     const latestResume = await Resume.findOne({ user: req.user.id })
-      .sort({ uploadedAt: -1 })
-      .select('filename status atsScore parsedSkills uploadedAt')
+      .sort({ uploadedAt: -1, createdAt: -1 })
+      .select('originalFilename fileKey status atsScore parsedSkills uploadedAt createdAt')
 
     if (!latestResume) {
       return res.json({ hasResume: false })
@@ -1382,11 +1401,12 @@ app.get('/me/resume', verifyToken, async (req, res) => {
     return res.json({
       hasResume: true,
       resume: {
-        filename: latestResume.filename,
+        resumeId: latestResume.fileKey || latestResume._id.toString(),
+        filename: latestResume.originalFilename,
         status: latestResume.status,
         atsScore: latestResume.atsScore,
         parsedSkills: latestResume.parsedSkills,
-        uploadedAt: latestResume.uploadedAt
+        uploadedAt: latestResume.uploadedAt || latestResume.createdAt
       }
     })
   } catch (err) {
@@ -1404,18 +1424,118 @@ app.get('/me/github', verifyToken, async (req, res) => {
       return res.json({ connected: false })
     }
 
+    // Ensure profile has login field (backward compatibility)
+    const profile = {
+      ...githubData.profile?.toObject?.() || githubData.profile || {},
+      login: githubData.profile?.login || githubData.githubUsername,
+    }
+
+    // Check if data is stale (older than 24 hours)
+    const isStale = githubData.lastSyncedAt &&
+      (Date.now() - new Date(githubData.lastSyncedAt).getTime() > 24 * 60 * 60 * 1000)
+
     return res.json({
       connected: true,
       github: {
         username: githubData.githubUsername,
-        profile: githubData.profile,
+        profile: profile,
         stats: githubData.stats,
         lastSyncedAt: githubData.lastSyncedAt
-      }
+      },
+      isStale: isStale
     })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Connect GitHub - Persist GitHub data to backend (SOURCE OF TRUTH)
+app.post('/github/connect', verifyToken, async (req, res) => {
+  try {
+    const { username, profile, stats } = req.body
+
+    if (!username) {
+      return res.status(400).json({ error: 'GitHub username is required' })
+    }
+
+    // Upsert GitHub data
+    const githubData = await GitHub.findOneAndUpdate(
+      { user: req.user.id },
+      {
+        user: req.user.id,
+        githubUsername: username,
+        profile: {
+          login: profile?.login || username,
+          name: profile?.name || username,
+          bio: profile?.bio || '',
+          avatarUrl: profile?.avatarUrl || '',
+          publicRepos: profile?.publicRepos || 0,
+          followers: profile?.followers || 0,
+          following: profile?.following || 0,
+          location: profile?.location || '',
+          company: profile?.company || '',
+        },
+        stats: {
+          totalCommits: stats?.totalCommits || 0,
+          totalPullRequests: stats?.totalPullRequests || 0,
+          totalStars: stats?.totalStars || 0,
+          languages: stats?.languages || [],
+          topRepositories: stats?.topRepositories || [],
+        },
+        lastSyncedAt: new Date(),
+        syncStatus: 'completed',
+      },
+      { upsert: true, new: true }
+    )
+
+    // Also update User model's github field for quick queries
+    await User.findByIdAndUpdate(req.user.id, {
+      'github.username': username,
+      'github.connected': true,
+      'github.lastSyncedAt': new Date(),
+    })
+
+    console.log(`[GitHub] Connected: ${username} for user ${req.user.id}`)
+
+    return res.json({
+      success: true,
+      message: 'GitHub connected successfully',
+      github: {
+        username: githubData.githubUsername,
+        profile: githubData.profile,
+        stats: githubData.stats,
+        lastSyncedAt: githubData.lastSyncedAt,
+      },
+    })
+  } catch (err) {
+    console.error('[GitHub] Connect error:', err)
+    return res.status(500).json({ error: 'Failed to connect GitHub' })
+  }
+})
+
+// Disconnect GitHub - Remove GitHub connection
+app.delete('/github/disconnect', verifyToken, async (req, res) => {
+  try {
+    // Remove from GitHub collection
+    await GitHub.findOneAndDelete({ user: req.user.id })
+
+    // Update User model
+    await User.findByIdAndUpdate(req.user.id, {
+      'github.username': null,
+      'github.connected': false,
+      'github.lastSyncedAt': null,
+    })
+
+    console.log(`[GitHub] Disconnected for user ${req.user.id}`)
+
+    return res.json({
+      success: true,
+      message: 'GitHub disconnected successfully',
+    })
+  } catch (err) {
+    console.error('[GitHub] Disconnect error:', err)
+    return res.status(500).json({ error: 'Failed to disconnect GitHub' })
   }
 })
 

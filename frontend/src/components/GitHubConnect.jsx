@@ -4,35 +4,55 @@ import { useAuth } from '../context/AuthContext'
 export default function GitHubConnect() {
   const [profile, setProfile] = useState(null)
   const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
   const [error, setError] = useState(null)
   const [githubUsername, setGithubUsername] = useState('')
   const { apiCall } = useAuth()
 
-  // Fetch persisted GitHub status on mount (backend as single source of truth)
+  // Fetch persisted GitHub status on mount (BACKEND IS SOURCE OF TRUTH)
   useEffect(() => {
     fetchGitHubStatus()
   }, [])
 
   const fetchGitHubStatus = async () => {
     try {
+      setLoading(true)
+      console.log('[GitHub] Fetching status from backend...')
+
       const response = await apiCall('/me/github')
       if (response.ok) {
         const data = await response.json()
+        console.log('[GitHub] Backend response:', data)
+
         if (data.connected && data.github) {
-          // Hydrate state from backend
+          // HYDRATE from backend - THIS IS THE SOURCE OF TRUTH
+          console.log('[GitHub] Hydrating profile:', data.github.profile)
+          console.log('[GitHub] Hydrating stats:', data.github.stats)
+
           setProfile(data.github.profile)
           setStats(data.github.stats)
+
+          if (data.isStale) {
+            console.log('[GitHub] Data is stale, consider refreshing')
+          }
+        } else {
+          console.log('[GitHub] Not connected')
+          setProfile(null)
+          setStats(null)
         }
       }
     } catch (error) {
-      console.error('Error fetching GitHub status:', error)
+      console.error('[GitHub] Error fetching status:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const fetchGitHubData = async (username) => {
     try {
-      // Fetch user profile
+      // Fetch user profile from GitHub API
       const userResponse = await fetch(`https://api.github.com/users/${username}`)
       if (!userResponse.ok) {
         throw new Error('GitHub user not found')
@@ -69,12 +89,11 @@ export default function GitHubConnect() {
         })
       }
 
-      // Estimate commits (GitHub API doesn't provide total commits without auth)
-      // Use repos count as a proxy
+      // Estimate commits
       totalCommits = reposData.length * 50 + Math.floor(Math.random() * 500)
       totalPullRequests = Math.floor(reposData.length * 2 + Math.random() * 100)
 
-      setProfile({
+      const profileData = {
         name: userData.name || userData.login,
         login: userData.login,
         bio: userData.bio || 'GitHub Developer',
@@ -86,20 +105,19 @@ export default function GitHubConnect() {
         company: userData.company || 'Not specified',
         blog: userData.blog || '',
         twitterUsername: userData.twitter_username || ''
-      })
+      }
 
-      setStats({
+      const statsData = {
         totalCommits,
         totalPullRequests,
         totalStars,
         languages: Array.from(languagesSet),
         topRepositories
-      })
+      }
 
-      setGithubUsername('')
+      return { profile: profileData, stats: statsData }
     } catch (err) {
-      setError(err.message || 'Failed to fetch GitHub data')
-      console.error('GitHub fetch error:', err)
+      throw err
     }
   }
 
@@ -110,67 +128,210 @@ export default function GitHubConnect() {
     }
 
     try {
-      setLoading(true)
+      setConnecting(true)
       setError(null)
-      await fetchGitHubData(githubUsername.trim())
+
+      // Step 1: Fetch data from GitHub API
+      const { profile: profileData, stats: statsData } = await fetchGitHubData(githubUsername.trim())
+
+      // Step 2: PERSIST to backend (SOURCE OF TRUTH)
+      const response = await apiCall('/github/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: githubUsername.trim(),
+          profile: profileData,
+          stats: statsData,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save GitHub connection')
+      }
+
+      // Step 3: Update local state from backend response
+      const data = await response.json()
+      setProfile(data.github.profile)
+      setStats(data.github.stats)
+      setGithubUsername('')
+
+      console.log('[GitHub] Connection persisted to backend')
+    } catch (err) {
+      setError(err.message || 'Failed to connect GitHub')
+      console.error('GitHub connect error:', err)
     } finally {
-      setLoading(false)
+      setConnecting(false)
     }
   }
 
+  const handleDisconnect = async () => {
+    try {
+      setDisconnecting(true)
+      setError(null)
+
+      // Call backend to disconnect (SOURCE OF TRUTH)
+      const response = await apiCall('/github/disconnect', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to disconnect GitHub')
+      }
+
+      // Clear local state AFTER backend confirms
+      setProfile(null)
+      setStats(null)
+
+      console.log('[GitHub] Disconnected from backend')
+    } catch (err) {
+      setError(err.message || 'Failed to disconnect GitHub')
+      console.error('GitHub disconnect error:', err)
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    if (!profile?.login) return
+
+    try {
+      setConnecting(true)
+      setError(null)
+
+      console.log('[GitHub] Refreshing data for:', profile.login)
+
+      // Re-fetch from GitHub API
+      const { profile: profileData, stats: statsData } = await fetchGitHubData(profile.login)
+
+      // Re-persist to backend
+      const response = await apiCall('/github/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: profile.login,
+          profile: profileData,
+          stats: statsData,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProfile(data.github.profile)
+        setStats(data.github.stats)
+        console.log('[GitHub] Data refreshed successfully')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to refresh GitHub data')
+      console.error('GitHub refresh error:', err)
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="card-premium">
+        <div className="flex items-center justify-center py-12">
+          <div className="spinner-premium" />
+          <span className="ml-3 text-body" style={{ color: 'var(--text-muted)' }}>
+            Loading GitHub status...
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Connected state
   if (profile) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">GitHub Profile</h3>
+      <div className="card-premium">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-subheading" style={{ color: 'var(--text-primary)' }}>
+            GitHub Connected
+          </h3>
+          <span className="badge-success">Connected</span>
+        </div>
+
+        {/* Profile Header */}
         <div className="flex items-center gap-4 mb-6">
           {profile.avatarUrl && (
-            <img src={profile.avatarUrl} alt={profile.name} className="w-16 h-16 rounded-full" />
+            <img
+              src={profile.avatarUrl}
+              alt={profile.name}
+              className="w-16 h-16 rounded-full"
+              style={{ border: '2px solid var(--border-subtle)' }}
+            />
           )}
           <div>
-            <p className="font-semibold text-lg text-gray-900 dark:text-white">{profile.name}</p>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">@{profile.login}</p>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">{profile.bio}</p>
-            {profile.location && <p className="text-gray-500 dark:text-gray-500 text-xs">📍 {profile.location}</p>}
-            {profile.company && <p className="text-gray-500 dark:text-gray-500 text-xs">🏢 {profile.company}</p>}
+            <p className="text-body font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {profile.name}
+            </p>
+            <p className="text-small" style={{ color: 'var(--text-muted)' }}>
+              @{profile.login}
+            </p>
+            {profile.bio && (
+              <p className="text-small mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                {profile.bio}
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">Public Repos</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{profile.publicRepos}</p>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div
+            className="p-4 rounded-xl text-center"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+              {profile.publicRepos}
+            </p>
+            <p className="text-small" style={{ color: 'var(--text-muted)' }}>Repos</p>
           </div>
-          <div className="bg-green-50 dark:bg-green-900 p-4 rounded">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">Followers</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{profile.followers}</p>
+          <div
+            className="p-4 rounded-xl text-center"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+              {profile.followers}
+            </p>
+            <p className="text-small" style={{ color: 'var(--text-muted)' }}>Followers</p>
           </div>
-          <div className="bg-purple-50 dark:bg-purple-900 p-4 rounded">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">Repository Stars</p>
-            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.totalStars}</p>
+          <div
+            className="p-4 rounded-xl text-center"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+              {stats?.totalStars || 0}
+            </p>
+            <p className="text-small" style={{ color: 'var(--text-muted)' }}>Stars</p>
           </div>
-          <div className="bg-orange-50 dark:bg-orange-900 p-4 rounded">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">Languages</p>
-            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.languages.length}</p>
+          <div
+            className="p-4 rounded-xl text-center"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <p className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+              {stats?.languages?.length || 0}
+            </p>
+            <p className="text-small" style={{ color: 'var(--text-muted)' }}>Languages</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-indigo-50 dark:bg-indigo-900 p-4 rounded">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">Commits (Est.)</p>
-            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.totalCommits}</p>
-          </div>
-          <div className="bg-pink-50 dark:bg-pink-900 p-4 rounded">
-            <p className="text-gray-600 dark:text-gray-300 text-sm">Pull Requests</p>
-            <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{stats.totalPullRequests}</p>
-          </div>
-        </div>
-
-        {stats.languages.length > 0 && (
+        {/* Languages */}
+        {stats?.languages?.length > 0 && (
           <div className="mb-6">
-            <p className="font-semibold mb-2 text-gray-900 dark:text-white">Programming Languages</p>
+            <p className="text-small font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
+              Languages
+            </p>
             <div className="flex flex-wrap gap-2">
               {stats.languages.map(lang => (
-                <span key={lang} className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
+                <span
+                  key={lang}
+                  className="badge-accent"
+                >
                   {lang}
                 </span>
               ))}
@@ -178,87 +339,135 @@ export default function GitHubConnect() {
           </div>
         )}
 
-        {stats.topRepositories.length > 0 && (
+        {/* Top Repositories */}
+        {stats?.topRepositories?.length > 0 && (
           <div className="mb-6">
-            <p className="font-semibold mb-3 text-gray-900 dark:text-white">Top Repositories</p>
+            <p className="text-small font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
+              Top Repositories
+            </p>
             <div className="space-y-3">
-              {stats.topRepositories.map(repo => (
+              {stats.topRepositories.slice(0, 3).map(repo => (
                 <a
                   key={repo.name}
                   href={repo.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block p-4 bg-gray-50 dark:bg-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition border border-gray-200 dark:border-slate-600"
+                  className="block p-4 rounded-xl transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-default)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-subtle)'
+                  }}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{repo.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{repo.description}</p>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="font-medium"
+                      style={{ color: 'var(--accent-primary)' }}
+                    >
+                      {repo.name}
+                    </span>
+                    <span className="text-small" style={{ color: 'var(--text-muted)' }}>
+                      ⭐ {repo.stars}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span>⭐ {repo.stars} stars</span>
-                    <span>•</span>
-                    <span className="bg-gray-200 dark:bg-slate-600 px-2 py-1 rounded">{repo.language}</span>
-                  </div>
+                  {repo.description && (
+                    <p
+                      className="text-small mt-1 truncate"
+                      style={{ color: 'var(--text-tertiary)' }}
+                    >
+                      {repo.description}
+                    </p>
+                  )}
                 </a>
               ))}
             </div>
           </div>
         )}
 
-        <button
-          onClick={() => {
-            setProfile(null)
-            setStats(null)
-          }}
-          className="w-full bg-red-500 dark:bg-red-700 text-white py-2 rounded-lg hover:bg-red-600 dark:hover:bg-red-800 transition font-medium"
-        >
-          Disconnect GitHub
-        </button>
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleRefresh}
+            disabled={connecting}
+            className="btn-secondary flex-1"
+          >
+            {connecting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="spinner-premium" style={{ width: '18px', height: '18px' }} />
+                Refreshing...
+              </span>
+            ) : (
+              '↻ Refresh Data'
+            )}
+          </button>
+          <button
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            className="btn-danger flex-1"
+          >
+            {disconnecting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="spinner-premium" style={{ width: '18px', height: '18px', borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+                Disconnecting...
+              </span>
+            ) : (
+              'Disconnect'
+            )}
+          </button>
+        </div>
       </div>
     )
   }
 
+  // Not connected state
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
-      <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Connect GitHub Account</h3>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Enter your GitHub username to fetch your real profile data, repositories, and contribution statistics. This will help boost your employability score.
+    <div className="card-premium">
+      <h3 className="text-subheading mb-2" style={{ color: 'var(--text-primary)' }}>
+        Connect GitHub
+      </h3>
+      <p className="text-body mb-6" style={{ color: 'var(--text-muted)' }}>
+        Link your GitHub profile to showcase your repositories and boost your score.
       </p>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg">
-          <p className="text-red-700 dark:text-red-200 font-medium">Error: {error}</p>
+        <div className="error-message mb-4">
+          {error}
         </div>
       )}
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="label-premium">
           GitHub Username
         </label>
         <input
           type="text"
           value={githubUsername}
           onChange={(e) => setGithubUsername(e.target.value)}
-          placeholder="e.g., torvalds, gvanrossum"
-          className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="e.g., torvalds"
+          className="input-premium"
           onKeyPress={(e) => e.key === 'Enter' && handleConnect()}
-          disabled={loading}
+          disabled={connecting}
         />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Enter your GitHub username (case-sensitive)</p>
+        <p className="text-small mt-2" style={{ color: 'var(--text-muted)' }}>
+          We use the public GitHub API. No authentication required.
+        </p>
       </div>
 
       <button
         onClick={handleConnect}
-        disabled={loading || !githubUsername.trim()}
-        className="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-900 dark:hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+        disabled={connecting || !githubUsername.trim()}
+        className="btn-primary w-full"
       >
-        {loading ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            Fetching GitHub Data...
-          </>
+        {connecting ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="spinner-premium" style={{ width: '18px', height: '18px', borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+            Connecting...
+          </span>
         ) : (
           <>
             <span>🔗</span>
@@ -266,10 +475,6 @@ export default function GitHubConnect() {
           </>
         )}
       </button>
-
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
-        We use the public GitHub API. No authentication required.
-      </p>
     </div>
   )
 }

@@ -10,27 +10,34 @@ export default function Navbar() {
 
   const isActive = (path) => location.pathname === path
 
+  const navLinks = [
+    { path: '/dashboard', label: 'Dashboard' },
+    { path: '/leaderboard', label: 'Leaderboard' },
+  ]
+
+  // Add admin link for admin users
+  if (user?.role === 'admin') {
+    navLinks.push({ path: '/admin', label: 'Admin' })
+  }
+
   return (
     <nav
-      className="sticky top-0 z-50 backdrop-blur-sm"
-      style={{
-        backgroundColor: 'rgba(var(--bg-primary-rgb, 250, 249, 247), 0.8)',
-        borderBottom: '1px solid var(--border-color)'
-      }}
+      className="sticky top-0 z-50 glass-effect"
+      style={{ borderBottom: '1px solid var(--border-subtle)' }}
     >
       <div className="container-premium">
         <div className="flex justify-between items-center h-16">
-          {/* Logo Section - Left Aligned */}
-          <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            {/* GDG Logo Image - Subtle, Non-Dominant */}
+          {/* Logo */}
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-3 group"
+          >
             <img
               src={gdgLogo}
               alt="GDG Logo"
-              className="h-8 w-8 object-contain flex-shrink-0 opacity-75"
+              className="h-8 w-8 object-contain opacity-75 group-hover:opacity-100 transition-opacity"
             />
-
-            {/* Product Branding */}
-            <div className="flex flex-col leading-tight">
+            <div className="hidden sm:flex flex-col">
               <span
                 className="text-base font-semibold tracking-tight"
                 style={{ color: 'var(--text-primary)' }}
@@ -38,72 +45,80 @@ export default function Navbar() {
                 ATS Leaderboard
               </span>
               <span
-                className="text-xs font-normal"
-                style={{ color: 'var(--text-muted)', opacity: 0.65 }}
+                className="text-xs"
+                style={{ color: 'var(--text-muted)' }}
               >
                 GDG on Campus OIST
               </span>
             </div>
           </Link>
 
-          {/* Navigation Links - Minimal */}
+          {/* Center Navigation */}
           <div className="hidden md:flex items-center gap-1">
-            <Link
-              to="/dashboard"
-              className={`px-4 py-2 rounded-lg font-medium text-small transition-all ${isActive('/dashboard')
-                ? 'bg-caramel text-white'
-                : 'hover:bg-opacity-5 hover:bg-caramel'
-                }`}
-              style={!isActive('/dashboard') ? { color: 'var(--text-secondary)' } : {}}
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/leaderboard"
-              className={`px-4 py-2 rounded-lg font-medium text-small transition-all ${isActive('/leaderboard')
-                ? 'bg-caramel text-white'
-                : 'hover:bg-opacity-5 hover:bg-caramel'
-                }`}
-              style={!isActive('/leaderboard') ? { color: 'var(--text-secondary)' } : {}}
-            >
-              Leaderboard
-            </Link>
-            {/* Admin Dashboard - Only for admin users */}
-            {user?.role === 'admin' && (
+            {navLinks.map((link) => (
               <Link
-                to="/admin"
-                className={`px-4 py-2 rounded-lg font-medium text-small transition-all ${isActive('/admin')
-                  ? 'bg-caramel text-white'
-                  : 'hover:bg-opacity-5 hover:bg-caramel'
-                  }`}
-                style={!isActive('/admin') ? { color: 'var(--text-secondary)' } : {}}
+                key={link.path}
+                to={link.path}
+                className="relative px-4 py-2 rounded-lg text-small font-medium transition-all"
+                style={{
+                  color: isActive(link.path)
+                    ? 'var(--text-primary)'
+                    : 'var(--text-tertiary)',
+                  backgroundColor: isActive(link.path)
+                    ? 'var(--bg-secondary)'
+                    : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive(link.path)) {
+                    e.currentTarget.style.color = 'var(--text-primary)'
+                    e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive(link.path)) {
+                    e.currentTarget.style.color = 'var(--text-tertiary)'
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }
+                }}
               >
-                Admin
+                {link.label}
+                {isActive(link.path) && (
+                  <span
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                    style={{ backgroundColor: 'var(--accent-primary)' }}
+                  />
+                )}
               </Link>
-            )}
+            ))}
           </div>
 
-          {/* User Section - Understated */}
-          <div className="flex items-center gap-4">
+          {/* Right Section */}
+          <div className="flex items-center gap-3">
             <ThemeToggle />
 
-            {/* User Info - Subtle */}
-            <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            {/* User Pill */}
+            <div
+              className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-full"
+              style={{ backgroundColor: 'var(--bg-secondary)' }}
+            >
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-                style={{ backgroundColor: '#84592B' }}
+                style={{ backgroundColor: 'var(--accent-primary)' }}
               >
                 {user?.name?.charAt(0)?.toUpperCase()}
               </div>
-              <span className="text-small font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <span
+                className="text-small font-medium max-w-[120px] truncate"
+                style={{ color: 'var(--text-secondary)' }}
+              >
                 {user?.name}
               </span>
             </div>
 
-            {/* Logout - Minimal */}
+            {/* Sign Out */}
             <button
               onClick={logout}
-              className="text-small font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-opacity-5 hover:bg-wine"
+              className="btn-ghost"
               style={{ color: 'var(--text-muted)' }}
             >
               Sign out

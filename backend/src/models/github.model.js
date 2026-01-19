@@ -7,12 +7,15 @@ const GitHubSchema = new mongoose.Schema(
     accessToken: { type: String }, // encrypted in production
     refreshToken: { type: String },
     profile: {
+      login: String,
       name: String,
       bio: String,
       avatarUrl: String,
       publicRepos: Number,
       followers: Number,
       following: Number,
+      location: String,
+      company: String,
     },
     stats: {
       totalCommits: { type: Number, default: 0 },
@@ -25,6 +28,7 @@ const GitHubSchema = new mongoose.Schema(
           stars: Number,
           language: String,
           url: String,
+          description: String,
         }
       ],
     },

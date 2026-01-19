@@ -10,8 +10,8 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [loginType, setLoginType] = useState('student') // 'student' or 'admin'
-  const [authMode, setAuthMode] = useState('login') // 'login' or 'register'
+  const [loginType, setLoginType] = useState('student')
+  const [authMode, setAuthMode] = useState('login')
   const { login, register } = useAuth()
   const navigate = useNavigate()
 
@@ -22,7 +22,6 @@ export default function Login() {
 
     // Admin registration mode
     if (authMode === 'register' && loginType === 'admin') {
-      // Validate password confirmation
       if (password !== confirmPassword) {
         setError('Passwords do not match')
         setLoading(false)
@@ -33,15 +32,11 @@ export default function Login() {
 
       if (result.success) {
         const userRole = result.user?.role || 'student'
-
-        // Check if user was actually assigned admin role
         if (userRole !== 'admin') {
-          setError('This email is not authorized for admin registration. Please use an institutional email (@oist.edu, @college.ac.in) or contact your administrator.')
+          setError('This email is not authorized for admin registration. Please use an institutional email or contact your administrator.')
           setLoading(false)
           return
         }
-
-        // Admin registration successful - redirect to admin dashboard
         navigate('/admin')
       } else {
         setError(result.error)
@@ -50,33 +45,22 @@ export default function Login() {
       return
     }
 
-    // Login mode (student or admin)
+    // Login mode
     const result = await login(email, password)
 
     if (result.success) {
-      // Role-aware redirect
       const userRole = result.user?.role || 'student'
 
       if (loginType === 'admin') {
-        // Admin login selected
         if (userRole === 'admin') {
-          // Authorized admin - redirect to admin dashboard
           navigate('/admin')
         } else {
-          // Not authorized as admin
-          setError('This email is not authorized for admin access. Please use an institutional email or contact your administrator.')
+          setError('This email is not authorized for admin access.')
           setLoading(false)
           return
         }
       } else {
-        // Student login selected
-        if (userRole === 'admin') {
-          // Admin trying to login as student - redirect to admin dashboard
-          navigate('/admin')
-        } else {
-          // Regular student login
-          navigate('/dashboard')
-        }
+        navigate(userRole === 'admin' ? '/admin' : '/dashboard')
       }
     } else {
       setError(result.error)
@@ -86,168 +70,149 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div
+      className="min-h-screen flex items-center justify-center px-6 py-16"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
       <div className="w-full max-w-md">
-        {/* Header Section - Centered */}
-        <div className="text-center mb-10 animate-fadeIn">
-          {/* GDG Logo - Centered, Larger */}
-          <div className="flex justify-center mb-6">
+        {/* Header */}
+        <div className="text-center mb-10 animate-fadeUp">
+          <Link to="/" className="inline-flex items-center gap-3 mb-8">
             <img
               src={gdgLogo}
               alt="GDG Logo"
-              className="h-16 w-16 object-contain opacity-90"
+              className="h-12 w-12 object-contain opacity-90"
             />
-          </div>
+          </Link>
 
-          {/* Product Branding */}
-          <h1 className="text-heading mb-2" style={{ color: 'var(--text-primary)' }}>
-            ATS Leaderboard
-          </h1>
-          <p className="text-small mb-6" style={{ color: 'var(--text-muted)' }}>
-            GDG on Campus OIST
-          </p>
-
-          {/* Welcome Message */}
-          <p className="text-body" style={{ color: 'var(--text-muted)' }}>
+          <h1
+            className="text-heading mb-2"
+            style={{ color: 'var(--text-primary)' }}
+          >
             {loginType === 'admin'
-              ? (authMode === 'register' ? 'Admin & Organizer Registration' : 'Admin & Organizer Access')
-              : (authMode === 'register' ? 'Create your account' : 'Sign in to access your employability dashboard')}
+              ? (authMode === 'register' ? 'Admin Registration' : 'Admin Access')
+              : 'Welcome back'}
+          </h1>
+          <p
+            className="text-body"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {loginType === 'admin'
+              ? 'Institutional analytics portal'
+              : 'Sign in to your account'}
           </p>
         </div>
 
         {/* Login Type Toggle */}
-        <div className="mb-6 animate-fadeIn">
-          <div
-            className="flex rounded-lg p-1"
+        <div
+          className="flex p-1 rounded-xl mb-6 animate-fadeUp stagger-1"
+          style={{ backgroundColor: 'var(--bg-secondary)' }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setLoginType('student')
+              setAuthMode('login')
+              setError('')
+            }}
+            className="flex-1 py-2.5 px-4 rounded-lg text-small font-medium transition-all"
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)'
+              backgroundColor: loginType === 'student' ? 'var(--bg-elevated)' : 'transparent',
+              color: loginType === 'student' ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow: loginType === 'student' ? 'var(--shadow-sm)' : 'none',
             }}
           >
+            Student
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLoginType('admin')
+              setError('')
+            }}
+            className="flex-1 py-2.5 px-4 rounded-lg text-small font-medium transition-all"
+            style={{
+              backgroundColor: loginType === 'admin' ? 'var(--bg-elevated)' : 'transparent',
+              color: loginType === 'admin' ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow: loginType === 'admin' ? 'var(--shadow-sm)' : 'none',
+            }}
+          >
+            Admin / Organizer
+          </button>
+        </div>
+
+        {/* Admin Mode Toggle */}
+        {loginType === 'admin' && (
+          <div className="flex gap-2 mb-6 animate-fadeIn">
             <button
               type="button"
               onClick={() => {
-                setLoginType('student')
                 setAuthMode('login')
                 setError('')
               }}
-              className={`flex-1 py-2.5 px-4 rounded-md text-small font-semibold transition-all ${loginType === 'student'
-                  ? 'bg-white dark:bg-slate-700 shadow-sm'
-                  : 'hover:bg-white/50 dark:hover:bg-slate-700/50'
-                }`}
+              className="flex-1 py-2.5 rounded-lg text-small font-medium transition-all"
               style={{
-                color: loginType === 'student' ? '#84592B' : 'var(--text-muted)',
-                borderColor: loginType === 'student' ? 'var(--border-color)' : 'transparent'
+                backgroundColor: authMode === 'login' ? 'var(--accent-primary)' : 'transparent',
+                color: authMode === 'login' ? 'white' : 'var(--text-tertiary)',
+                border: authMode !== 'login' ? '1px solid var(--border-default)' : 'none',
               }}
             >
-              Student Login
+              Sign in
             </button>
             <button
               type="button"
               onClick={() => {
-                setLoginType('admin')
+                setAuthMode('register')
                 setError('')
               }}
-              className={`flex-1 py-2.5 px-4 rounded-md text-small font-semibold transition-all ${loginType === 'admin'
-                  ? 'bg-white dark:bg-slate-700 shadow-sm'
-                  : 'hover:bg-white/50 dark:hover:bg-slate-700/50'
-                }`}
+              className="flex-1 py-2.5 rounded-lg text-small font-medium transition-all"
               style={{
-                color: loginType === 'admin' ? '#84592B' : 'var(--text-muted)',
-                borderColor: loginType === 'admin' ? 'var(--border-color)' : 'transparent'
+                backgroundColor: authMode === 'register' ? 'var(--accent-primary)' : 'transparent',
+                color: authMode === 'register' ? 'white' : 'var(--text-tertiary)',
+                border: authMode !== 'register' ? '1px solid var(--border-default)' : 'none',
               }}
             >
-              Admin / Organizer
+              Register
             </button>
-          </div>
-        </div>
-
-        {/* Admin Auth Mode Toggle (Sign in / Register) */}
-        {loginType === 'admin' && (
-          <div className="mb-6 animate-fadeIn">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('login')
-                  setError('')
-                }}
-                className={`flex-1 py-2 px-4 rounded-md text-small font-medium transition-all ${authMode === 'login'
-                    ? 'bg-caramel text-white'
-                    : 'bg-transparent border border-gray-300 hover:bg-gray-50'
-                  }`}
-                style={{
-                  color: authMode === 'login' ? 'white' : 'var(--text-secondary)'
-                }}
-              >
-                Sign in as Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('register')
-                  setError('')
-                }}
-                className={`flex-1 py-2 px-4 rounded-md text-small font-medium transition-all ${authMode === 'register'
-                    ? 'bg-caramel text-white'
-                    : 'bg-transparent border border-gray-300 hover:bg-gray-50'
-                  }`}
-                style={{
-                  color: authMode === 'register' ? 'white' : 'var(--text-secondary)'
-                }}
-              >
-                Register as Admin
-              </button>
-            </div>
           </div>
         )}
 
-        {/* Login/Register Form */}
-        <div className="card-elevated animate-scaleIn" style={{ animationDelay: '0.1s' }}>
+        {/* Form Card */}
+        <div className="card-elevated animate-fadeUp stagger-2">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Error Message */}
+            {/* Error */}
             {error && (
               <div className="error-message animate-fadeIn">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <div className="flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   <span>{error}</span>
                 </div>
               </div>
             )}
 
-            {/* Admin Registration Notice */}
-            {loginType === 'admin' && authMode === 'register' && (
-              <div
-                className="p-3 rounded-lg animate-fadeIn"
-                style={{
-                  backgroundColor: 'rgba(132, 89, 43, 0.1)',
-                  border: '1px solid rgba(132, 89, 43, 0.2)'
-                }}
-              >
-                <p className="text-small" style={{ color: 'var(--text-secondary)' }}>
-                  <strong>Admin Registration:</strong> Only institutional emails (@oist.edu, @college.ac.in) or whitelisted addresses can register as admin.
+            {/* Admin Notice */}
+            {loginType === 'admin' && (
+              <div className="info-message">
+                <p className="text-small">
+                  <strong>
+                    {authMode === 'register' ? 'Admin Registration:' : 'Admin Access:'}
+                  </strong>
+                  {' '}Only institutional emails are authorized.
                 </p>
               </div>
             )}
 
-            {/* Admin Login Notice */}
-            {loginType === 'admin' && authMode === 'login' && (
-              <div
-                className="p-3 rounded-lg animate-fadeIn"
-                style={{
-                  backgroundColor: 'rgba(132, 89, 43, 0.1)',
-                  border: '1px solid rgba(132, 89, 43, 0.2)'
-                }}
-              >
-                <p className="text-small" style={{ color: 'var(--text-secondary)' }}>
-                  <strong>Admin Access:</strong> Use your institutional email (@oist.edu, @college.ac.in) or authorized organizer account.
-                </p>
-              </div>
-            )}
-
-            {/* Name Input (Registration only) */}
+            {/* Name (Register only) */}
             {authMode === 'register' && (
               <div>
                 <label htmlFor="name" className="label-premium">
@@ -266,10 +231,10 @@ export default function Login() {
               </div>
             )}
 
-            {/* Email Input */}
+            {/* Email */}
             <div>
               <label htmlFor="email" className="label-premium">
-                {loginType === 'admin' ? 'Institutional Email' : 'Email address'}
+                {loginType === 'admin' ? 'Institutional Email' : 'Email'}
               </label>
               <input
                 id="email"
@@ -278,13 +243,13 @@ export default function Login() {
                 autoComplete="email"
                 required
                 className="input-premium"
-                placeholder={loginType === 'admin' ? 'admin@oist.edu' : 'you@example.com'}
+                placeholder={loginType === 'admin' ? 'admin@college.ac.in' : 'you@example.com'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
-            {/* Password Input */}
+            {/* Password */}
             <div>
               <label htmlFor="password" className="label-premium">
                 Password
@@ -296,13 +261,13 @@ export default function Login() {
                 autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
                 required
                 className="input-premium"
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
-            {/* Confirm Password (Registration only) */}
+            {/* Confirm Password (Register only) */}
             {authMode === 'register' && (
               <div>
                 <label htmlFor="confirmPassword" className="label-premium">
@@ -315,75 +280,77 @@ export default function Login() {
                   autoComplete="new-password"
                   required
                   className="input-premium"
-                  placeholder="Confirm your password"
+                  placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
             )}
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full focus-ring disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full"
+              style={{ padding: '14px' }}
             >
               {loading ? (
-                <span className="flex items-center justify-center">
-                  <span className="spinner-premium mr-2"></span>
+                <span className="flex items-center justify-center gap-2">
+                  <span className="spinner-premium" style={{ width: '18px', height: '18px' }} />
                   {authMode === 'register' ? 'Creating account...' : 'Signing in...'}
                 </span>
               ) : (
                 authMode === 'register'
-                  ? (loginType === 'admin' ? 'Register as Admin' : 'Create Account')
-                  : (loginType === 'admin' ? 'Sign in as Admin' : 'Sign in')
+                  ? 'Create Account'
+                  : 'Sign in'
               )}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="divider-premium"></div>
+          <div className="divider" />
 
-          {/* Sign Up Link - Only for Student Login */}
-          {loginType === 'student' && (
-            <div className="text-center">
+          {/* Footer Link */}
+          <div className="text-center">
+            {loginType === 'student' ? (
               <p className="text-small" style={{ color: 'var(--text-muted)' }}>
                 Don't have an account?{' '}
                 <Link
                   to="/register"
-                  className="font-semibold hover:underline"
-                  style={{ color: '#84592B' }}
+                  className="font-medium hover:underline"
+                  style={{ color: 'var(--accent-primary)' }}
                 >
-                  Create one
+                  Sign up
                 </Link>
               </p>
-            </div>
-          )}
-
-          {/* Admin Help Text */}
-          {loginType === 'admin' && (
-            <div className="text-center">
+            ) : (
               <p className="text-small" style={{ color: 'var(--text-muted)' }}>
                 Need admin access?{' '}
                 <a
                   href="mailto:admin@oist.edu"
-                  className="font-semibold hover:underline"
-                  style={{ color: '#84592B' }}
+                  className="font-medium hover:underline"
+                  style={{ color: 'var(--accent-primary)' }}
                 >
-                  Contact your administrator
+                  Contact administrator
                 </a>
               </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Footer Note */}
-        <div className="mt-8 text-center animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-          <p className="text-small" style={{ color: 'var(--text-muted)' }}>
-            {loginType === 'admin'
-              ? 'Institutional analytics and insights platform'
-              : 'Track your career readiness with AI-powered insights'}
-          </p>
+        {/* Back to home */}
+        <div className="mt-8 text-center animate-fadeIn stagger-3">
+          <Link
+            to="/"
+            className="text-small font-medium inline-flex items-center gap-2 transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to home
+          </Link>
         </div>
       </div>
     </div>
