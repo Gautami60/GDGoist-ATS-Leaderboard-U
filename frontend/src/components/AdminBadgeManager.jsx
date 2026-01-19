@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 export default function AdminBadgeManager() {
@@ -17,11 +17,7 @@ export default function AdminBadgeManager() {
 
     const { apiCall } = useAuth()
 
-    useEffect(() => {
-        fetchBadges()
-    }, [])
-
-    const fetchBadges = async () => {
+    const fetchBadges = useCallback(async () => {
         try {
             const response = await apiCall('/badges')
             if (response.ok) {
@@ -33,7 +29,11 @@ export default function AdminBadgeManager() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [apiCall])
+
+    useEffect(() => {
+        fetchBadges()
+    }, [fetchBadges])
 
     const handleFileChange = (e) => {
         const file = e.target.files[0]

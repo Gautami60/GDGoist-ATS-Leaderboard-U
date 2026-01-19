@@ -74,13 +74,11 @@ export default function AdminDashboard() {
     }, [apiCall, usersPagination.page, searchQuery])
 
     useEffect(() => {
-        // eslint-disable-next-line
         fetchAdminData()
     }, [fetchAdminData])
 
     useEffect(() => {
         if (activeTab === 'users') {
-            // eslint-disable-next-line
             fetchUsers()
         }
     }, [activeTab, fetchUsers])
