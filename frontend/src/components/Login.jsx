@@ -357,7 +357,7 @@ export default function Login() {
           <div className="text-center">
             {loginType === 'student' ? (
               <p className="text-small" style={{ color: 'var(--text-muted)' }}>
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Link
                   to="/register"
                   className="font-medium hover:underline"

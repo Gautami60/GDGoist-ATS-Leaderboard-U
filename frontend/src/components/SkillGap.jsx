@@ -11,24 +11,23 @@ export default function SkillGap() {
   const { apiCall } = useAuth()
 
   useEffect(() => {
-    fetchCurrentSkills()
-  }, [])
-
-  const fetchCurrentSkills = async () => {
-    try {
-      const response = await apiCall('/me/resume')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.resume?.parsedSkills) {
-          setCurrentSkills(data.resume.parsedSkills)
+    const fetchCurrentSkills = async () => {
+      try {
+        const response = await apiCall('/me/resume')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.resume?.parsedSkills) {
+            setCurrentSkills(data.resume.parsedSkills)
+          }
         }
+      } catch (error) {
+        console.error('Error fetching skills:', error)
+      } finally {
+        setFetchingSkills(false)
       }
-    } catch (error) {
-      console.error('Error fetching skills:', error)
-    } finally {
-      setFetchingSkills(false)
     }
-  }
+    fetchCurrentSkills()
+  }, [apiCall])
 
   const addSkill = () => {
     if (skillInput.trim() && !currentSkills.includes(skillInput.trim())) {
@@ -60,6 +59,7 @@ export default function SkillGap() {
       }
     } catch (error) {
       console.error('Error analyzing skill gap:', error)
+      setAnalysis(null)
     } finally {
       setLoading(false)
     }

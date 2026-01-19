@@ -1,34 +1,31 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 
 export default function PublicProfile() {
     const { userId } = useParams()
     const navigate = useNavigate()
-    const { apiCall } = useAuth()
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState(null)
     const [error, setError] = useState('')
 
     useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await fetch(`http://localhost:4000/users/${userId}/profile`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setProfile(data.profile)
+                } else {
+                    setError('User not found')
+                }
+            } catch (err) {
+                setError('Failed to load profile')
+            } finally {
+                setLoading(false)
+            }
+        }
         fetchProfile()
     }, [userId])
-
-    const fetchProfile = async () => {
-        try {
-            const res = await fetch(`http://localhost:4000/users/${userId}/profile`)
-            if (res.ok) {
-                const data = await res.json()
-                setProfile(data.profile)
-            } else {
-                setError('User not found')
-            }
-        } catch (err) {
-            setError('Failed to load profile')
-        } finally {
-            setLoading(false)
-        }
-    }
 
     if (loading) {
         return (

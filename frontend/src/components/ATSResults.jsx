@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function ATSResults({ score, feedback, breakdown, contact, parsedSkills, similarityMethod, modelInfo, onClose, rawText, parsingErrors }) {
+export default function ATSResults({ score, feedback, breakdown, parsedSkills, onClose }) {
   const getScoreLabel = (score) => {
     if (score >= 80) return 'Excellent'
     if (score >= 60) return 'Good'

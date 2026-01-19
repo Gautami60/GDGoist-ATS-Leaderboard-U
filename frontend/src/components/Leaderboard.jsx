@@ -17,45 +17,45 @@ export default function Leaderboard() {
   })
 
   useEffect(() => {
-    fetchLeaderboard()
-  }, [filters, pagination.page])
+    const fetchLeaderboard = async () => {
+      setLoading(true)
+      setError('')
 
-  const fetchLeaderboard = async () => {
-    setLoading(true)
-    setError('')
+      try {
+        const params = new URLSearchParams({
+          page: pagination.page.toString(),
+          limit: pagination.limit.toString()
+        })
 
-    try {
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString()
-      })
+        if (filters.department) {
+          params.append('department', filters.department)
+        }
+        if (filters.graduationYear) {
+          params.append('graduationYear', filters.graduationYear)
+        }
 
-      if (filters.department) {
-        params.append('department', filters.department)
+        const response = await fetch(`http://localhost:4000/leaderboard?${params}`)
+        const data = await response.json()
+
+        if (response.ok) {
+          setLeaderboardData(data.entries || [])
+          setPagination(prev => ({
+            ...prev,
+            totalCount: data.totalCount || 0
+          }))
+        } else {
+          setError('Failed to fetch leaderboard data')
+        }
+      } catch (error) {
+        console.error('Leaderboard fetch error:', error)
+        setError('Network error while fetching leaderboard')
+      } finally {
+        setLoading(false)
       }
-      if (filters.graduationYear) {
-        params.append('graduationYear', filters.graduationYear)
-      }
-
-      const response = await fetch(`http://localhost:4000/leaderboard?${params}`)
-      const data = await response.json()
-
-      if (response.ok) {
-        setLeaderboardData(data.entries || [])
-        setPagination(prev => ({
-          ...prev,
-          totalCount: data.totalCount || 0
-        }))
-      } else {
-        setError('Failed to fetch leaderboard data')
-      }
-    } catch (error) {
-      console.error('Leaderboard fetch error:', error)
-      setError('Network error while fetching leaderboard')
-    } finally {
-      setLoading(false)
     }
-  }
+
+    fetchLeaderboard()
+  }, [filters, pagination.page, pagination.limit])
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({

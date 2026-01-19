@@ -11,6 +11,8 @@ const app = express()
 const bcrypt = require('bcryptjs')
 const User = require('./models/user.model')
 const Resume = require('./models/resume.model')
+const Badge = require('./models/badge.model')
+const BadgeDefinition = require('./models/badgeDefinition.model')
 const { recalculateUserScore } = require('./scoreService')
 const { generateToken, verifyToken, requireRole } = require('./middleware/auth')
 const { requireOnboarded } = require('./middleware/onboarding')
@@ -510,7 +512,6 @@ app.get('/users/:userId/profile', async (req, res) => {
 const { generateUploadUrl } = require('./s3')
 const Score = require('./models/score.model')
 const GitHub = require('./models/github.model')
-const Badge = require('./models/badge.model')
 const Connection = require('./models/connection.model')
 const SkillGap = require('./models/skillgap.model')
 const { getAuthorizationUrl, getAccessToken, syncGitHubData } = require('./github')
@@ -2048,6 +2049,132 @@ app.delete('/me/delete-account', verifyToken, async (req, res) => {
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: err.message })
+  }
+})
+
+// ============ BADGE MANAGEMENT SYSTEM ============
+
+// GET all available badge definitions (Public)
+app.get('/badges', async (req, res) => {
+  try {
+    const badges = await BadgeDefinition.find({ active: true }).sort('createdAt')
+    return res.json({ badges })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// GET my badges (Student) - Populated with definitions
+app.get('/me/badges', verifyToken, async (req, res) => {
+  try {
+    const badges = await Badge.find({ user: req.user.id })
+      .populate('definitionId')
+      .sort('-earnedAt')
+
+    // Transform to include definition details if available, fallback to legacy
+    const formattedBadges = badges.map(b => {
+      const def = b.definitionId
+      return {
+        _id: b._id,
+        name: def ? def.name : b.badgeType, // Fallback to basic name
+        description: def ? def.description : (b.metadata?.description || 'Awarded badge'),
+        icon: def ? def.icon : (b.metadata?.icon || '🏅'),
+        earnedAt: b.earnedAt,
+        isSystem: !def
+      }
+    })
+
+    return res.json({ badges: formattedBadges })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST Create new badge definition (Admin) - With Icon Upload
+app.post('/admin/badges', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { name, description, criteria, points } = req.body
+
+    if (!req.files || !req.files.icon) {
+      return res.status(400).json({ error: 'Icon image is required' })
+    }
+
+    const iconFile = req.files.icon
+
+    // Validate image type
+    if (!iconFile.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'File must be an image' })
+    }
+
+    // Save icon
+    const fileExt = path.extname(iconFile.name)
+    const iconFilename = `badge_${Date.now()}${fileExt}`
+    const uploadPath = path.join(__dirname, '../uploads/badges', iconFilename)
+
+    // Ensure directory exists
+    const badgeDir = path.dirname(uploadPath)
+    if (!fs.existsSync(badgeDir)) {
+      fs.mkdirSync(badgeDir, { recursive: true })
+    }
+
+    await iconFile.mv(uploadPath)
+
+    const iconUrl = `/uploads/badges/${iconFilename}`
+
+    const badgeDef = await BadgeDefinition.create({
+      name,
+      description,
+      criteria,
+      icon: iconUrl,
+      points: points ? Number(points) : 2
+    })
+
+    await createAuditLog('ADMIN_CREATE_BADGE', req.user.id, { badgeName: name })
+
+    return res.json({ badge: badgeDef })
+  } catch (err) {
+    console.error(err)
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'Badge name already exists' })
+    }
+    return res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST Assign badge to user (Admin)
+app.post('/admin/users/:userId/badges', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { badgeDefinitionId } = req.body
+
+    if (!badgeDefinitionId) return res.status(400).json({ error: 'Badge Definition ID required' })
+
+    const badgeDef = await BadgeDefinition.findById(badgeDefinitionId)
+    if (!badgeDef) return res.status(404).json({ error: 'Badge Definition not found' })
+
+    // Check if already assigned
+    const existing = await Badge.findOne({ user: userId, definitionId: badgeDefinitionId })
+    if (existing) return res.status(400).json({ error: 'User already has this badge' })
+
+    // Assign
+    const newBadge = await Badge.create({
+      user: userId,
+      badgeType: badgeDef.name, // Store name as type for legacy compat
+      definitionId: badgeDef._id,
+      earnedAt: new Date()
+    })
+
+    // Recalculate score
+    await recalculateUserScore(userId)
+
+    await createAuditLog('ADMIN_ASSIGN_BADGE', req.user.id, { targetUser: userId, badgeName: badgeDef.name })
+
+    return res.json({ success: true, badge: newBadge })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Server error' })
   }
 })
 

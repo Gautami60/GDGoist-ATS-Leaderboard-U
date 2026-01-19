@@ -8,31 +8,30 @@ export default function Badges() {
   const { apiCall } = useAuth()
 
   useEffect(() => {
-    fetchBadges()
-  }, [])
+    const fetchBadges = async () => {
+      try {
+        const [userBadgesRes, allBadgesRes] = await Promise.all([
+          apiCall('/me/badges'),
+          apiCall('/badges')
+        ])
 
-  const fetchBadges = async () => {
-    try {
-      const [userBadgesRes, allBadgesRes] = await Promise.all([
-        apiCall('/me/badges'),
-        apiCall('/badges')
-      ])
+        if (userBadgesRes.ok) {
+          const data = await userBadgesRes.json()
+          setBadges(data.badges || [])
+        }
 
-      if (userBadgesRes.ok) {
-        const data = await userBadgesRes.json()
-        setBadges(data.badges || [])
+        if (allBadgesRes.ok) {
+          const data = await allBadgesRes.json()
+          setAvailableBadges(data.badges || [])
+        }
+      } catch (error) {
+        console.error('Error fetching badges:', error)
+      } finally {
+        setLoading(false)
       }
-
-      if (allBadgesRes.ok) {
-        const data = await allBadgesRes.json()
-        setAvailableBadges(data.badges || [])
-      }
-    } catch (error) {
-      console.error('Error fetching badges:', error)
-    } finally {
-      setLoading(false)
     }
-  }
+    fetchBadges()
+  }, [apiCall])
 
   if (loading) {
     return (

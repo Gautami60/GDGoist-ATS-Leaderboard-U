@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ResumeUpload from './ResumeUpload'
@@ -17,35 +17,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
 
-  useEffect(() => {
-    if (!user?.department || !user?.graduationYear) {
-      navigate('/onboarding')
-      return
-    }
-    checkConsentAndFetchData()
-  }, [user, navigate])
-
-  const checkConsentAndFetchData = async () => {
-    try {
-      const testResponse = await apiCall('/me')
-      const userData = await testResponse.json()
-
-      if (testResponse.ok) {
-        const hasConsentGiven = userData.user?.dpdpConsent?.consented === true
-        setHasConsent(hasConsentGiven)
-        if (!hasConsentGiven) {
-          setShowConsentModal(true)
-        }
-      }
-      await fetchUserScore()
-    } catch (error) {
-      console.error('Error checking consent:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchUserScore = async () => {
+  const fetchUserScore = useCallback(async () => {
     try {
       const response = await apiCall('/score/breakdown')
       if (response.ok) {
@@ -76,7 +48,36 @@ export default function Dashboard() {
         rank: null
       })
     }
-  }
+  }, [apiCall])
+
+  useEffect(() => {
+    if (!user?.department || !user?.graduationYear) {
+      navigate('/onboarding')
+      return
+    }
+
+    const checkConsentAndFetchData = async () => {
+      try {
+        const testResponse = await apiCall('/me')
+        const userData = await testResponse.json()
+
+        if (testResponse.ok) {
+          const hasConsentGiven = userData.user?.dpdpConsent?.consented === true
+          setHasConsent(hasConsentGiven)
+          if (!hasConsentGiven) {
+            setShowConsentModal(true)
+          }
+        }
+        await fetchUserScore()
+      } catch (error) {
+        console.error('Error checking consent:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkConsentAndFetchData()
+  }, [user, navigate, apiCall, fetchUserScore])
 
   const handleConsentGiven = () => {
     setHasConsent(true)

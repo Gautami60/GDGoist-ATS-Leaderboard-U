@@ -46,28 +46,27 @@ export default function ProfileEdit() {
     const years = Array.from({ length: 10 }, (_, i) => currentYear + i)
 
     useEffect(() => {
-        fetchProfile()
-    }, [])
-
-    const fetchProfile = async () => {
-        try {
-            const res = await apiCall('/me/profile')
-            if (res.ok) {
-                const data = await res.json()
-                setProfile({
-                    ...data.profile,
-                    graduationYear: data.profile.graduationYear || '',
-                    socialLinks: data.profile.socialLinks || { linkedin: '', twitter: '', instagram: '', portfolio: '', github: '' },
-                    projects: data.profile.projects || [],
-                    experiences: data.profile.experiences || []
-                })
+        const fetchProfile = async () => {
+            try {
+                const res = await apiCall('/me/profile')
+                if (res.ok) {
+                    const data = await res.json()
+                    setProfile({
+                        ...data.profile,
+                        graduationYear: data.profile.graduationYear || '',
+                        socialLinks: data.profile.socialLinks || { linkedin: '', twitter: '', instagram: '', portfolio: '', github: '' },
+                        projects: data.profile.projects || [],
+                        experiences: data.profile.experiences || []
+                    })
+                }
+            } catch (err) {
+                setError('Failed to load profile')
+            } finally {
+                setLoading(false)
             }
-        } catch (err) {
-            setError('Failed to load profile')
-        } finally {
-            setLoading(false)
         }
-    }
+        fetchProfile()
+    }, [apiCall])
 
     const handleSave = async () => {
         try {

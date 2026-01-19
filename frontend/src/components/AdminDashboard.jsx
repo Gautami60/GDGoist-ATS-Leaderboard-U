@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
+import AdminBadgeManager from './AdminBadgeManager'
 
 export default function AdminDashboard() {
     const { apiCall } = useAuth()
@@ -13,20 +14,15 @@ export default function AdminDashboard() {
     const [error, setError] = useState('')
     const [activeTab, setActiveTab] = useState('overview')
 
-    useEffect(() => {
-        fetchAdminData()
-    }, [])
+    // Badge Assignment State
+    const [showAssignModal, setShowAssignModal] = useState(false)
+    const [selectedUser, setSelectedUser] = useState(null)
+    const [availableBadges, setAvailableBadges] = useState([])
+    const [selectedBadgeId, setSelectedBadgeId] = useState('')
+    const [assigning, setAssigning] = useState(false)
 
-    useEffect(() => {
-        if (activeTab === 'users') {
-            fetchUsers()
-        }
-    }, [activeTab, usersPagination.page])
-
-    const fetchAdminData = async () => {
+    const fetchAdminData = useCallback(async () => {
         try {
-            setLoading(true)
-            setError('')
 
             const statsRes = await apiCall('/admin/analytics/platform')
             if (statsRes.ok) {
@@ -52,9 +48,9 @@ export default function AdminDashboard() {
             setError('Failed to load admin analytics')
             setLoading(false)
         }
-    }
+    }, [apiCall])
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         try {
             const params = new URLSearchParams({
                 page: usersPagination.page.toString(),
@@ -75,7 +71,19 @@ export default function AdminDashboard() {
         } catch (err) {
             console.error('Users fetch error:', err)
         }
-    }
+    }, [apiCall, usersPagination.page, searchQuery])
+
+    useEffect(() => {
+        // eslint-disable-next-line
+        fetchAdminData()
+    }, [fetchAdminData])
+
+    useEffect(() => {
+        if (activeTab === 'users') {
+            // eslint-disable-next-line
+            fetchUsers()
+        }
+    }, [activeTab, fetchUsers])
 
     const handleExport = async () => {
         try {
@@ -102,6 +110,50 @@ export default function AdminDashboard() {
     const handleSearch = () => {
         setUsersPagination(prev => ({ ...prev, page: 1 }))
         fetchUsers()
+    }
+
+    const handleAssignClick = async (user) => {
+        setSelectedUser(user)
+        setShowAssignModal(true)
+        setSelectedBadgeId('')
+
+        try {
+            const res = await apiCall('/badges')
+            if (res.ok) {
+                const data = await res.json()
+                // The API returns either an array or { badges: [...] }
+                setAvailableBadges(Array.isArray(data) ? data : (data.badges || []))
+            }
+        } catch (err) {
+            console.error('Failed to fetch available badges', err)
+        }
+    }
+
+    const handleBadgeAssignSubmit = async (e) => {
+        e.preventDefault()
+        if (!selectedUser || !selectedBadgeId) return
+
+        setAssigning(true)
+        try {
+            const res = await apiCall(`/admin/users/${selectedUser.id}/badges`, {
+                method: 'POST',
+                body: JSON.stringify({ definitionId: selectedBadgeId })
+            })
+
+            if (res.ok) {
+                setShowAssignModal(false)
+                // Refresh user list to show updated score
+                fetchUsers()
+            } else {
+                const data = await res.json()
+                setError(data.error || 'Failed to assign badge')
+            }
+        } catch (err) {
+            console.error('Badge assignment error:', err)
+            setError('Failed to assign badge')
+        } finally {
+            setAssigning(false)
+        }
     }
 
     if (loading) {
@@ -148,19 +200,18 @@ export default function AdminDashboard() {
                     className="flex gap-2 mb-8 p-1"
                     style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)' }}
                 >
-                    {['overview', 'users', 'best-practices'].map((tab) => (
+                    {['overview', 'users', 'analytics', 'badges'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className="flex-1 py-3 px-4 font-medium text-sm capitalize"
+                            className={`flex-1 py-2 px-4 text-sm font-medium transition-all ${activeTab === tab ? 'shadow-sm' : ''}`}
                             style={{
-                                backgroundColor: activeTab === tab ? 'var(--accent-primary)' : 'transparent',
-                                color: activeTab === tab ? 'white' : 'var(--text-muted)',
+                                backgroundColor: activeTab === tab ? 'var(--bg-elevated)' : 'transparent',
+                                color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-muted)',
                                 borderRadius: 'var(--radius-lg)',
-                                transition: 'all 0.2s'
                             }}
                         >
-                            {tab.replace('-', ' ')}
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -301,7 +352,7 @@ export default function AdminDashboard() {
                     <div>
                         <div className="flex items-center justify-between mb-6">
                             <h2 style={{ color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 600 }}>
-                                All Users ({usersPagination.totalCount})
+                                All Users {`(${usersPagination.totalCount})`}
                             </h2>
                             <button
                                 onClick={handleExport}
@@ -354,7 +405,7 @@ export default function AdminDashboard() {
                                 </div>
                             ) : (
                                 users.map((user) => (
-                                    <UserCard key={user.id} user={user} />
+                                    <UserCard key={user.id} user={user} handleAssignClick={handleAssignClick} />
                                 ))
                             )}
                         </div>
@@ -396,8 +447,8 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* Best Practices Tab */}
-                {activeTab === 'best-practices' && (
+                {/* Analytics / Best Practices Tab */}
+                {activeTab === 'analytics' && (
                     <div className="space-y-6">
                         <BestPracticeCard
                             icon="🔒"
@@ -441,13 +492,67 @@ export default function AdminDashboard() {
                         />
                     </div>
                 )}
+
+                {/* Badges Tab */}
+                {activeTab === 'badges' && (
+                    <AdminBadgeManager />
+                )}
+
+                {/* Assign Badge Modal */}
+                {showAssignModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="bg-white p-6 rounded-lg max-w-md w-full" style={{ backgroundColor: 'var(--bg-card)' }}>
+                            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                                Assign Badge to {selectedUser?.name}
+                            </h3>
+                            <form onSubmit={handleBadgeAssignSubmit}>
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Select Badge</label>
+                                    <select
+                                        className="input-field w-full"
+                                        value={selectedBadgeId}
+                                        onChange={(e) => setSelectedBadgeId(e.target.value)}
+                                        required
+                                        style={{
+                                            backgroundColor: 'var(--bg-card-soft)',
+                                            color: 'var(--text-primary)',
+                                            borderColor: 'var(--border-subtle)'
+                                        }}
+                                    >
+                                        <option value="">-- Select Badge --</option>
+                                        {availableBadges.map(b => (
+                                            <option key={b._id} value={b._id}>{b.name} ({b.points} pts)</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAssignModal(false)}
+                                        className="px-4 py-2 text-sm rounded-lg"
+                                        style={{ color: 'var(--text-muted)' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={assigning}
+                                        className="btn-primary"
+                                    >
+                                        {assigning ? 'Assigning...' : 'Assign Badge'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
 }
 
 // User Card Component - Name on top, Department + Class of Year below
-function UserCard({ user }) {
+function UserCard({ user, handleAssignClick }) {
     return (
         <div
             className="card p-4 flex items-center justify-between"
@@ -476,7 +581,19 @@ function UserCard({ user }) {
                     </div>
                 </div>
             </div>
+
             <div className="flex items-center gap-4">
+                <button
+                    onClick={() => handleAssignClick(user)}
+                    className="text-xs px-3 py-1 mr-2 rounded border hover:bg-gray-50 transition-colors"
+                    style={{
+                        borderColor: 'var(--border-subtle)',
+                        color: 'var(--accent-primary)',
+                        backgroundColor: 'transparent'
+                    }}
+                >
+                    + Badge
+                </button>
                 <div className="text-right">
                     <div style={{ color: 'var(--accent-primary)', fontSize: '1.5rem', fontWeight: 700 }}>
                         {user.totalScore}
@@ -502,7 +619,7 @@ function UserCard({ user }) {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
 
