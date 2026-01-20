@@ -438,23 +438,31 @@ app.post('/me/avatar', verifyToken, async (req, res) => {
     const file = req.files.avatar
     const uploadDir = path.join(__dirname, '../uploads')
 
-    // Ensure uploads directory exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-
     // Generate unique filename
     const fileExt = path.extname(file.name)
     const filename = `avatar-${req.user.id}-${Date.now()}${fileExt}`
-    const uploadPath = path.join(uploadDir, filename)
+    let fileUrl
 
-    // Move file to uploads directory
-    await file.mv(uploadPath)
+    try {
+      // Try S3 upload
+      const s3Key = `avatars/${filename}`
+      fileUrl = await uploadFile(file.data, s3Key, file.mimetype)
+    } catch (s3Err) {
+      console.log('S3 Upload failed, falling back to local:', s3Err.message)
 
-    // Build URL (assuming backend is serving static files from /uploads)
-    const protocol = req.protocol
-    const host = req.get('host')
-    const fileUrl = `${protocol}://${host}/uploads/${filename}`
+      // Ensure uploads directory exists
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true })
+      }
+
+      const uploadPath = path.join(uploadDir, filename)
+      await file.mv(uploadPath)
+
+      // Build URL (assuming backend is serving static files from /uploads)
+      const protocol = req.protocol
+      const host = req.get('host')
+      fileUrl = `${protocol}://${host}/uploads/${filename}`
+    }
 
     // Update user profile
     const user = await User.findByIdAndUpdate(
@@ -493,6 +501,28 @@ app.get('/users/:userId/profile', async (req, res) => {
     const Score = require('./models/score.model')
     const latestScore = await Score.findOne({ user: userId }).sort({ createdAt: -1 })
 
+    // Get user's badges
+    const Badge = require('./models/badge.model')
+    const userBadges = await Badge.find({ user: userId }).populate('definitionId').sort({ earnedAt: -1 })
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`
+
+    const formattedBadges = userBadges.map(b => {
+      const def = b.definitionId
+      let iconUrl = def ? def.icon : (b.metadata?.icon || '🏅')
+      if (iconUrl && iconUrl.startsWith('/')) {
+        iconUrl = `${baseUrl}${iconUrl}`
+      }
+
+      return {
+        name: def ? def.name : b.badgeType,
+        description: def ? def.description : (b.metadata?.description || 'Awarded badge'),
+        icon: iconUrl,
+        earnedAt: b.earnedAt,
+        points: def ? def.points : 0
+      }
+    })
+
     return res.json({
       profile: {
         id: user._id, name: user.name, department: user.department, graduationYear: user.graduationYear,
@@ -500,6 +530,7 @@ app.get('/users/:userId/profile', async (req, res) => {
         projects: user.projects || [], experiences: user.experiences || [],
         github: user.github?.username ? { username: user.github.username } : null,
         score: latestScore ? { total: latestScore.totalScore, ats: latestScore.resumeScore, github: latestScore.githubScore, badges: latestScore.badgesScore } : null,
+        badges: formattedBadges,
         isPrivate: false
       }
     })
@@ -509,7 +540,7 @@ app.get('/users/:userId/profile', async (req, res) => {
   }
 })
 
-const { generateUploadUrl } = require('./s3')
+const { generateUploadUrl, uploadFile } = require('./s3')
 const Score = require('./models/score.model')
 const GitHub = require('./models/github.model')
 const Connection = require('./models/connection.model')
@@ -663,6 +694,26 @@ app.get('/leaderboard', async (req, res) => {
     const pipeline = [
       { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'userDoc' } },
       { $unwind: '$userDoc' },
+      // Lookup badges and their definitions
+      {
+        $lookup: {
+          from: 'badges',
+          let: { userId: '$user' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$user', '$$userId'] } } },
+            {
+              $lookup: {
+                from: 'badgedefinitions',
+                localField: 'definitionId',
+                foreignField: '_id',
+                as: 'definition'
+              }
+            },
+            { $unwind: { path: '$definition', preserveNullAndEmptyArrays: true } }
+          ],
+          as: 'badges'
+        }
+      }
     ]
     if (Object.keys(matchStage).length) pipeline.push({ $match: matchStage })
     pipeline.push(facet)
@@ -673,6 +724,8 @@ app.get('/leaderboard', async (req, res) => {
 
     // Need global ranks. We will compute rankOffset = (page-1)*lim and assign ranks accordingly
     const rankOffset = (pageNum - 1) * lim
+    const baseUrl = `${req.protocol}://${req.get('host')}`
+
     const entries = data.map((d, i) => ({
       rank: rankOffset + i + 1,
       userId: d.userDoc._id,
@@ -680,7 +733,18 @@ app.get('/leaderboard', async (req, res) => {
       name: d.userDoc.name || 'Anonymous',
       department: d.userDoc.department || null,
       graduationYear: d.userDoc.graduationYear || null,
-      profilePicture: d.userDoc.profilePicture || null
+      profilePicture: d.userDoc.profilePicture || null,
+      badges: (d.badges || []).map(b => {
+        let iconUrl = b.definition ? b.definition.icon : (b.metadata?.icon || '🏅')
+        if (iconUrl && iconUrl.startsWith('/')) {
+          iconUrl = `${baseUrl}${iconUrl}`
+        }
+        return {
+          name: b.definition ? b.definition.name : b.badgeType,
+          icon: iconUrl,
+          points: b.definition ? b.definition.points : 0
+        }
+      }).slice(0, 3) // Top 3 badges only for leaderboard view
     }))
 
     return res.json({ totalCount, page: pageNum, limit: lim, entries })
@@ -994,51 +1058,81 @@ app.get('/badges/definitions', (req, res) => {
 // Search peers by skills (skill-based search)
 app.get('/peers/search', verifyToken, async (req, res) => {
   try {
-    const { skills, limit = 20, page = 1 } = req.query
-    if (!skills) return res.status(400).json({ error: 'skills query param required' })
+    const { q, skills, limit = 20, page = 1 } = req.query
+    // Prioritize 'q' (general search), fallback to 'skills' for backward compat
+    const searchQuery = q || (Array.isArray(skills) ? skills.join(' ') : skills) || ''
 
-    const skillArray = Array.isArray(skills) ? skills : [skills]
+    if (!searchQuery.trim()) return res.json({ peers: [], totalCount: 0 })
+
     const pageNum = Math.max(1, parseInt(page, 10) || 1)
     const lim = Math.max(1, Math.min(100, parseInt(limit, 10) || 20))
+    const skip = (pageNum - 1) * lim
+    const mongoose = require('mongoose')
 
-    // Find users with matching GitHub languages or resume skills
-    const matchingUsers = await GitHub.aggregate([
+    const pipeline = [
+      // 1. Start with users (exclude self)
       {
         $match: {
-          'stats.languages': { $in: skillArray }
+          _id: { $ne: new mongoose.Types.ObjectId(req.user.id) },
+          role: 'student' // Only search students
         }
       },
-      { $skip: (pageNum - 1) * lim },
-      { $limit: lim },
+      // 2. Lookup GitHub stats (for skills)
       {
         $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'userDoc'
-        }
-      },
-      { $unwind: '$userDoc' },
-      {
-        $lookup: {
-          from: 'scores',
-          localField: 'user',
+          from: 'githubs',
+          localField: '_id',
           foreignField: 'user',
-          as: 'scoreDoc'
+          as: 'githubDoc'
         }
       },
-      { $unwind: { path: '$scoreDoc', preserveNullAndEmptyArrays: true } },
-    ])
+      { $unwind: { path: '$githubDoc', preserveNullAndEmptyArrays: true } },
+      // 3. Match name OR skills
+      {
+        $match: {
+          $or: [
+            { name: { $regex: searchQuery, $options: 'i' } },
+            { 'githubDoc.stats.languages': { $regex: searchQuery, $options: 'i' } }
+          ]
+        }
+      },
+      // 4. Pagination
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: lim }
+          ],
+          totalCount: [{ $count: 'count' }]
+        }
+      }
+    ]
 
-    const peers = matchingUsers.map(m => ({
-      id: m.user,
-      name: m.userDoc.name,
-      department: m.userDoc.department,
-      skills: m.stats.languages,
-      score: m.scoreDoc ? m.scoreDoc.totalScore : 0,
+    const agg = await User.aggregate(pipeline)
+    const users = agg[0].data
+    const totalCount = agg[0].totalCount[0] ? agg[0].totalCount[0].count : 0
+    const baseUrl = `${req.protocol}://${req.get('host')}`
+
+    // Hydrate results with scores
+    const peers = await Promise.all(users.map(async (u) => {
+      const Score = require('./models/score.model')
+      const latestScore = await Score.findOne({ user: u._id }).sort({ createdAt: -1 })
+
+      let picUrl = u.profilePicture
+      if (picUrl && picUrl.startsWith('/')) picUrl = `${baseUrl}${picUrl}`
+
+      return {
+        id: u._id,
+        name: u.name,
+        department: u.department,
+        graduationYear: u.graduationYear,
+        skills: u.githubDoc?.stats?.languages || [],
+        score: latestScore ? latestScore.totalScore : 0,
+        connected: false // TODO: Check actual connection status if needed
+      }
     }))
 
-    return res.json({ peers, page: pageNum, limit: lim })
+    return res.json({ peers, page: pageNum, limit: lim, totalCount })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })
@@ -1755,10 +1849,9 @@ app.get('/admin/users', verifyToken, requireRole('admin'), async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
 
-    await createAuditLog('ADMIN_VIEW_USERS', req.user.id, { search, department, graduationYear })
-
-    return res.json({
-      users: users.map(u => ({
+    const usersWithData = await Promise.all(users.map(async (u) => {
+      const badges = await Badge.find({ user: u._id }).populate('definitionId')
+      return {
         id: u._id,
         name: u.name || 'Anonymous',
         email: u.email,
@@ -1770,8 +1863,18 @@ app.get('/admin/users', verifyToken, requireRole('admin'), async (req, res) => {
         badgesScore: u.badgesScore || 0,
         hasResume: !!u.hasResume,
         profilePicture: u.profilePicture,
-        joinedAt: u.createdAt
-      })),
+        joinedAt: u.createdAt,
+        badges: badges.map(b => {
+          const bObj = b.toObject()
+          return { ...bObj, definition: bObj.definitionId }
+        }) || []
+      }
+    }))
+
+    await createAuditLog('ADMIN_VIEW_USERS', req.user.id, { search, department, graduationYear })
+
+    return res.json({
+      users: usersWithData,
       totalCount,
       page: parseInt(page),
       totalPages: Math.ceil(totalCount / parseInt(limit))
@@ -2054,8 +2157,8 @@ app.delete('/me/delete-account', verifyToken, async (req, res) => {
 
 // ============ BADGE MANAGEMENT SYSTEM ============
 
-// GET all available badge definitions (Public)
-app.get('/badges', async (req, res) => {
+// GET all available badge definitions for the platform (Admin/Public)
+app.get('/badges/all', async (req, res) => {
   try {
     const badges = await BadgeDefinition.find({ active: true }).sort('createdAt')
     return res.json({ badges })
@@ -2111,17 +2214,25 @@ app.post('/admin/badges', verifyToken, requireRole('admin'), async (req, res) =>
     // Save icon
     const fileExt = path.extname(iconFile.name)
     const iconFilename = `badge_${Date.now()}${fileExt}`
-    const uploadPath = path.join(__dirname, '../uploads/badges', iconFilename)
+    let iconUrl
 
-    // Ensure directory exists
-    const badgeDir = path.dirname(uploadPath)
-    if (!fs.existsSync(badgeDir)) {
-      fs.mkdirSync(badgeDir, { recursive: true })
+    try {
+      // Try S3 upload
+      const s3Key = `badges/${iconFilename}`
+      iconUrl = await uploadFile(iconFile.data, s3Key, iconFile.mimetype)
+    } catch (s3Err) {
+      console.log('S3 Badge Upload failed, falling back to local:', s3Err.message)
+
+      const uploadPath = path.join(__dirname, '../uploads/badges', iconFilename)
+      // Ensure directory exists
+      const badgeDir = path.dirname(uploadPath)
+      if (!fs.existsSync(badgeDir)) {
+        fs.mkdirSync(badgeDir, { recursive: true })
+      }
+
+      await iconFile.mv(uploadPath)
+      iconUrl = `/uploads/badges/${iconFilename}`
     }
-
-    await iconFile.mv(uploadPath)
-
-    const iconUrl = `/uploads/badges/${iconFilename}`
 
     const badgeDef = await BadgeDefinition.create({
       name,
@@ -2139,6 +2250,29 @@ app.post('/admin/badges', verifyToken, requireRole('admin'), async (req, res) =>
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Badge name already exists' })
     }
+    return res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// DELETE badge definition (Admin) - Soft delete by setting active=false
+app.delete('/admin/badges/:badgeId', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { badgeId } = req.params
+
+    const badgeDef = await BadgeDefinition.findById(badgeId)
+    if (!badgeDef) {
+      return res.status(404).json({ error: 'Badge not found' })
+    }
+
+    // Soft delete - set active to false so users who earned it still have it
+    badgeDef.active = false
+    await badgeDef.save()
+
+    await createAuditLog('ADMIN_DELETE_BADGE', req.user.id, { badgeName: badgeDef.name, badgeId })
+
+    return res.json({ success: true, message: 'Badge deleted successfully' })
+  } catch (err) {
+    console.error(err)
     return res.status(500).json({ error: 'Server error' })
   }
 })
@@ -2172,6 +2306,41 @@ app.post('/admin/users/:userId/badges', verifyToken, requireRole('admin'), async
     await createAuditLog('ADMIN_ASSIGN_BADGE', req.user.id, { targetUser: userId, badgeName: badgeDef.name })
 
     return res.json({ success: true, badge: newBadge })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Remove badge from user
+app.delete('/admin/users/:userId/badges/:badgeId', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { userId, badgeId } = req.params
+
+    // First check if badge exists
+    const badge = await Badge.findById(badgeId)
+    if (!badge) return res.status(404).json({ error: 'Badge not found' })
+
+    // Check ownership
+    if (badge.user.toString() !== userId) {
+      return res.status(400).json({ error: 'Badge does not belong to this user' })
+    }
+
+    // Get definition for audit log
+    const definition = await BadgeDefinition.findById(badge.definitionId)
+
+    await Badge.deleteOne({ _id: badgeId })
+
+    // Recalculate score
+    await recalculateUserScore(userId)
+
+    await createAuditLog('ADMIN_REMOVE_BADGE', req.user.id, {
+      targetUser: userId,
+      badgeType: badge.badgeType,
+      badgeName: definition ? definition.name : 'Unknown'
+    })
+
+    return res.json({ success: true, message: 'Badge removed' })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import gdgLogo from '../assets/gdg-logo.png'
+import FloatingLines from './FloatingLines'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -45,10 +46,31 @@ export default function Register() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-6 py-16"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
+      className="min-h-screen flex items-center justify-center px-6 py-16 relative overflow-hidden"
+      style={{ backgroundColor: '#0a0a0c' }}
     >
-      <div className="w-full max-w-md">
+      {/* FloatingLines Background */}
+      <div className="fixed inset-0 z-0">
+        <FloatingLines
+          enabledWaves={["top", "middle", "bottom"]}
+          lineCount={5}
+          lineDistance={5}
+          bendRadius={5}
+          bendStrength={-0.5}
+          interactive={true}
+          parallax={true}
+        />
+        {/* Overlay for better readability */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(10,10,12,0.4) 0%, rgba(10,10,12,0.7) 60%, rgba(10,10,12,0.9) 100%)'
+          }}
+        />
+      </div>
+
+      {/* Content */}
+      <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-10 animate-fadeUp">
           <Link to="/" className="inline-flex items-center gap-3 mb-8">

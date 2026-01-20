@@ -15,7 +15,7 @@ export default function PeerDiscovery() {
     setError('')
 
     try {
-      const response = await apiCall(`/peers/search?skills=${encodeURIComponent(searchQuery)}`)
+      const response = await apiCall(`/peers/search?q=${encodeURIComponent(searchQuery)}`)
       if (response.ok) {
         const data = await response.json()
         setPeers(data.peers || [])
@@ -63,7 +63,7 @@ export default function PeerDiscovery() {
       <div className="flex gap-2 mb-6">
         <input
           type="text"
-          placeholder="Search by skills (e.g., React, Python)"
+          placeholder="Search by name or skills (e.g., React, Alice)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -195,9 +195,9 @@ export default function PeerDiscovery() {
           }}
         >
           <span className="text-4xl mb-3 block">🔍</span>
-          <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Find peers with similar skills</p>
+          <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Find peers</p>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Search by skills to discover classmates you can collaborate with
+            Search by name or skills to find classmates
           </p>
         </div>
       )}

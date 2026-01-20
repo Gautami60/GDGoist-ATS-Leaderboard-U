@@ -18,6 +18,7 @@ const GitHub = require('./models/github.model')
 const Badge = require('./models/badge.model')
 const BadgeDefinition = require('./models/badgeDefinition.model')
 const Score = require('./models/score.model')
+const User = require('./models/user.model')
 
 // FROZEN WEIGHTS - DO NOT MODIFY
 const WEIGHTS = {
@@ -172,6 +173,14 @@ async function recalculateUserScore(userId, options = {}) {
                 runValidators: true,
             }
         )
+
+        // SYNC: Update User model cache for fast access/sorting
+        await User.findByIdAndUpdate(userId, {
+            totalScore,
+            atsScore: atsComponent,
+            githubScore: gitComponent,
+            badgesScore: badgeComponent
+        })
 
         return scoreDoc
     } catch (err) {

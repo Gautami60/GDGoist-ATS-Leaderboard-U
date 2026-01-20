@@ -116,7 +116,7 @@ export default function AdminDashboard() {
         setSelectedBadgeId('')
 
         try {
-            const res = await apiCall('/badges')
+            const res = await apiCall('/badges/all')
             if (res.ok) {
                 const data = await res.json()
                 // The API returns either an array or { badges: [...] }
@@ -135,7 +135,8 @@ export default function AdminDashboard() {
         try {
             const res = await apiCall(`/admin/users/${selectedUser.id}/badges`, {
                 method: 'POST',
-                body: JSON.stringify({ definitionId: selectedBadgeId })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ badgeDefinitionId: selectedBadgeId })
             })
 
             if (res.ok) {
@@ -153,6 +154,27 @@ export default function AdminDashboard() {
             setAssigning(false)
         }
     }
+
+    const handleRemoveBadge = async (userId, badgeId) => {
+        if (!window.confirm('Are you sure you want to remove this badge? Point deduction will occur.')) return
+
+        try {
+            const res = await apiCall(`/admin/users/${userId}/badges/${badgeId}`, {
+                method: 'DELETE'
+            })
+
+            if (res.ok) {
+                fetchUsers()
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Failed to remove badge')
+            }
+        } catch (err) {
+            console.error('Error removing badge:', err)
+            alert('Failed to remove badge: Network or Server Error')
+        }
+    }
+
 
     if (loading) {
         return (
@@ -403,7 +425,7 @@ export default function AdminDashboard() {
                                 </div>
                             ) : (
                                 users.map((user) => (
-                                    <UserCard key={user.id} user={user} handleAssignClick={handleAssignClick} />
+                                    <UserCard key={user.id} user={user} handleAssignClick={handleAssignClick} handleRemoveBadge={handleRemoveBadge} />
                                 ))
                             )}
                         </div>
@@ -550,74 +572,107 @@ export default function AdminDashboard() {
 }
 
 // User Card Component - Name on top, Department + Class of Year below
-function UserCard({ user, handleAssignClick }) {
+function UserCard({ user, handleAssignClick, handleRemoveBadge }) {
     return (
-        <div
-            className="card p-4 flex items-center justify-between"
-        >
-            <div className="flex items-center gap-4">
-                <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
-                    style={{ backgroundColor: 'var(--accent-primary)' }}
-                >
-                    {user.profilePicture ? (
-                        <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
-                    ) : (
-                        <span style={{ color: 'white', fontWeight: 600, fontSize: '1.125rem' }}>
-                            {user.name?.charAt(0)?.toUpperCase() || '?'}
-                        </span>
-                    )}
-                </div>
-                <div>
-                    {/* Name on top */}
-                    <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem' }}>
-                        {user.name}
+        <div className="card p-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{ backgroundColor: 'var(--accent-primary)' }}
+                    >
+                        {user.profilePicture ? (
+                            <img src={user.profilePicture} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <span style={{ color: 'white', fontWeight: 600, fontSize: '1.125rem' }}>
+                                {user.name?.charAt(0)?.toUpperCase() || '?'}
+                            </span>
+                        )}
                     </div>
-                    {/* Department + Class of Year below */}
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        {user.department} {user.graduationYear ? `• Class of ${user.graduationYear}` : ''}
+                    <div>
+                        {/* Name on top */}
+                        <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '1rem' }}>
+                            {user.name}
+                        </div>
+                        {/* Department + Class of Year below */}
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                            {user.department} {user.graduationYear ? `• Class of ${user.graduationYear}` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => handleAssignClick(user)}
+                        className="text-xs px-3 py-1 mr-2 rounded border hover:bg-gray-50 transition-colors"
+                        style={{
+                            borderColor: 'var(--border-subtle)',
+                            color: 'var(--accent-primary)',
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        + Badge
+                    </button>
+                    <div className="text-right">
+                        <div style={{ color: 'var(--accent-primary)', fontSize: '1.5rem', fontWeight: 700 }}>
+                            {user.totalScore}
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                            Total Score
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        {user.hasResume && (
+                            <span
+                                className="px-2 py-1"
+                                style={{
+                                    backgroundColor: 'var(--accent-success)',
+                                    color: 'white',
+                                    borderRadius: 'var(--radius-lg)',
+                                    fontSize: '0.625rem',
+                                    fontWeight: 600
+                                }}
+                            >
+                                Resume
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={() => handleAssignClick(user)}
-                    className="text-xs px-3 py-1 mr-2 rounded border hover:bg-gray-50 transition-colors"
-                    style={{
-                        borderColor: 'var(--border-subtle)',
-                        color: 'var(--accent-primary)',
-                        backgroundColor: 'transparent'
-                    }}
-                >
-                    + Badge
-                </button>
-                <div className="text-right">
-                    <div style={{ color: 'var(--accent-primary)', fontSize: '1.5rem', fontWeight: 700 }}>
-                        {user.totalScore}
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                        Total Score
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                    {user.hasResume && (
-                        <span
-                            className="px-2 py-1"
+            {/* Badges List */}
+            {user.badges && user.badges.length > 0 && (
+                <div className="mt-3 pt-3 flex flex-wrap gap-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    {user.badges.map(badge => (
+                        <div
+                            key={badge._id}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-full"
                             style={{
-                                backgroundColor: 'var(--accent-success)',
-                                color: 'white',
-                                borderRadius: 'var(--radius-lg)',
-                                fontSize: '0.625rem',
-                                fontWeight: 600
+                                backgroundColor: 'var(--bg-card-soft)',
+                                border: '1px solid var(--border-subtle)'
                             }}
                         >
-                            Resume
-                        </span>
-                    )}
+                            {badge.definition?.icon && (
+                                <img src={badge.definition.icon} alt="" className="w-4 h-4 object-contain" />
+                            )}
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 500 }}>
+                                {badge.definition?.name || badge.badgeType}
+                            </span>
+                            <button
+                                onClick={() => handleRemoveBadge && handleRemoveBadge(user.id, badge._id)}
+                                className="ml-1 w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
+                                style={{ color: 'var(--text-muted)' }}
+                                title="Remove Badge"
+                                onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent-danger)'}
+                                onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))}
                 </div>
-            </div>
-        </div >
+            )}
+        </div>
     )
 }
 

@@ -147,6 +147,31 @@ export default function PublicProfile() {
                     </div>
                 </div>
 
+                {/* Badges */}
+                {profile.badges?.length > 0 && (
+                    <div className="card p-6 mb-6">
+                        <h2 style={{ color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>Badges</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {profile.badges.map((badge, idx) => (
+                                <div key={idx} className="flex items-center gap-3 p-3" style={{ backgroundColor: 'var(--bg-card-soft)', borderRadius: 'var(--radius-lg)' }}>
+                                    <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--border-subtle)' }}>
+                                        <img
+                                            src={badge.icon}
+                                            alt={badge.name}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=' + badge.name + '&background=D4A053&color=fff' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>{badge.name}</div>
+                                        <div className="text-xs line-clamp-1" style={{ color: 'var(--text-muted)' }}>{badge.description}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Projects */}
                 {profile.projects?.length > 0 && (
                     <div className="card p-6 mb-6">

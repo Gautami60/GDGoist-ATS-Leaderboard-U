@@ -11,11 +11,7 @@ export default function GitHubConnect() {
   const [githubUsername, setGithubUsername] = useState('')
   const { apiCall } = useAuth()
 
-  // Fetch persisted GitHub status on mount (BACKEND IS SOURCE OF TRUTH)
-  useEffect(() => {
-    fetchGitHubStatus()
-  }, [fetchGitHubStatus])
-
+  // Define fetchGitHubStatus first (useCallback must be defined before useEffect that uses it)
   const fetchGitHubStatus = useCallback(async () => {
     try {
       setLoading(true)
@@ -49,6 +45,11 @@ export default function GitHubConnect() {
       setLoading(false)
     }
   }, [apiCall])
+
+  // Fetch persisted GitHub status on mount (BACKEND IS SOURCE OF TRUTH)
+  useEffect(() => {
+    fetchGitHubStatus()
+  }, [fetchGitHubStatus])
 
   const fetchGitHubData = async (username) => {
     // Fetch user profile from GitHub API

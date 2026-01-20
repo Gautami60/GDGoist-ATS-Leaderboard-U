@@ -10,6 +10,7 @@ import AdminDashboard from './components/AdminDashboard'
 import ProfileEdit from './components/ProfileEdit'
 import PublicProfile from './components/PublicProfile'
 import Navbar from './components/Navbar'
+import ClickSpark from './components/ClickSpark'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 
@@ -47,7 +48,15 @@ export default function App() {
     <ThemeProvider>
       <Router>
         <AuthProvider>
-          <AppContent />
+          <ClickSpark
+            sparkColor="#c9965c"
+            sparkSize={12}
+            sparkRadius={20}
+            sparkCount={10}
+            duration={500}
+          >
+            <AppContent />
+          </ClickSpark>
         </AuthProvider>
       </Router>
     </ThemeProvider>

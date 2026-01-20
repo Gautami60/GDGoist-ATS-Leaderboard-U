@@ -13,13 +13,14 @@ export default function AdminBadgeManager() {
     const [iconFile, setIconFile] = useState(null)
     const [previewUrl, setPreviewUrl] = useState(null)
     const [creating, setCreating] = useState(false)
+    const [deleting, setDeleting] = useState(null) // Track which badge is being deleted
     const [error, setError] = useState('')
 
     const { apiCall } = useAuth()
 
     const fetchBadges = useCallback(async () => {
         try {
-            const response = await apiCall('/badges')
+            const response = await apiCall('/badges/all')
             if (response.ok) {
                 const data = await response.json()
                 setBadges(data.badges || [])
@@ -87,6 +88,34 @@ export default function AdminBadgeManager() {
             setError('Network error')
         } finally {
             setCreating(false)
+        }
+    }
+
+    const handleDeleteBadge = async (badgeId, badgeName) => {
+        if (!window.confirm(`Are you sure you want to delete the badge "${badgeName}"? This action cannot be undone.`)) {
+            return
+        }
+
+        setDeleting(badgeId)
+        setError('')
+
+        try {
+            const response = await apiCall(`/admin/badges/${badgeId}`, {
+                method: 'DELETE'
+            })
+
+            if (response.ok) {
+                // Remove from local state immediately
+                setBadges(badges.filter(b => b._id !== badgeId))
+            } else {
+                const errData = await response.json()
+                setError(errData.error || 'Failed to delete badge')
+            }
+        } catch (err) {
+            console.error(err)
+            setError('Network error')
+        } finally {
+            setDeleting(null)
         }
     }
 
@@ -276,8 +305,25 @@ export default function AdminBadgeManager() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
                                             <div className="font-bold truncate" style={{ color: 'var(--text-primary)' }}>{badge.name}</div>
-                                            <div className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter" style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}>
-                                                +{badge.points}
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter" style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}>
+                                                    +{badge.points}
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteBadge(badge._id, badge.name)}
+                                                    disabled={deleting === badge._id}
+                                                    className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
+                                                    style={{ color: 'var(--accent-danger)' }}
+                                                    title="Delete badge"
+                                                >
+                                                    {deleting === badge._id ? (
+                                                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    )}
+                                                </button>
                                             </div>
                                         </div>
                                         <div className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--text-muted)', lineHeight: 1.4 }}>{badge.description}</div>

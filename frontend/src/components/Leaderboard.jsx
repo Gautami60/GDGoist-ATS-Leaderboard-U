@@ -322,6 +322,27 @@ export default function Leaderboard() {
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                               {entry.department || 'Unknown Department'} • Class of {entry.graduationYear || 'Unknown'}
                             </span>
+
+                            {/* Badges */}
+                            {entry.badges && entry.badges.length > 0 && (
+                              <div className="flex gap-1.5 mt-1.5">
+                                {entry.badges.map((badge, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="w-6 h-6 rounded-full overflow-hidden relative group/badge"
+                                    style={{ border: '1px solid var(--border-subtle)' }}
+                                    title={`${badge.name} (+${badge.points})`}
+                                  >
+                                    <img
+                                      src={badge.icon}
+                                      alt={badge.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=' + badge.name + '&background=D4A053&color=fff' }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
