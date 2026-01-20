@@ -1231,14 +1231,19 @@ app.get('/peers/search', verifyToken, async (req, res) => {
       const Score = require('./models/score.model')
       const latestScore = await Score.findOne({ user: u._id }).sort({ createdAt: -1 })
 
-      let picUrl = u.profilePicture
-      if (picUrl && picUrl.startsWith('/')) picUrl = `${baseUrl}${picUrl}`
+      let finalAvatar = u.profilePicture || null
+      if (!finalAvatar && u.githubDoc?.profile?.avatarUrl) {
+        finalAvatar = u.githubDoc.profile.avatarUrl
+      }
+      if (finalAvatar && finalAvatar.startsWith('/')) finalAvatar = `${baseUrl}${finalAvatar}`
 
       return {
         id: u._id,
         name: u.name,
+        email: u.email,
         department: u.department,
         graduationYear: u.graduationYear,
+        profilePicture: finalAvatar,
         skills: u.githubDoc?.stats?.languages || [],
         score: latestScore ? latestScore.totalScore : 0,
         connected: false // TODO: Check actual connection status if needed
