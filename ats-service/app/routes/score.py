@@ -18,13 +18,14 @@ Available Endpoints:
 - POST /similarity: Direct similarity calculation (with metadata)
 """
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional, Dict, Any
+import logging
 import traceback
 
-from app.services.parser import safe_extract_text, find_section, extract_contact_info
-from app.services.extractor import extract_skills_from_section, extract_skills_from_resume
-from app.services.scorer import (
+from app.services.resume_parser import safe_extract_text, find_section, extract_contact_info
+from app.services.skill_extractor import extract_skills_from_section, extract_skills_from_resume
+from app.services.scoring_engine import (
     ats_similarity_score_sbert,
     compute_heuristics,
     normalize_score,
@@ -36,6 +37,8 @@ import app
 
 # Create router
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 @router.get('/health')
@@ -100,13 +103,19 @@ async def parse_resume(
         }
     """
     try:
+        logger.info("Resume received: filename=%s, jd_provided=%s", file.filename, bool(job_description))
+
         # Step 1: Read file bytes
         data = await file.read()
-        
+
         # Step 2: Extract text from file (PDF or DOCX)
+        logger.info("Step 2: Extracting text from %s", file.filename)
         raw_text, parsing_errors = safe_extract_text(data, file.filename)
-        
+        if parsing_errors:
+            logger.warning("Parsing errors encountered: %s", parsing_errors)
+
         # Step 3: Parse resume sections
+        logger.info("Step 3: Parsing resume sections")
         parsed = {}
         
         # Extract skills section
@@ -117,28 +126,33 @@ async def parse_resume(
         parsed['skills'] = extract_skills_from_section(skills_section)
         
         # Also extract skills from full resume (used for scoring)
+        logger.info("Step 4: Extracting skills from full resume text")
         all_skills = extract_skills_from_resume(raw_text)
-        
+        logger.info("Skills detected: %d", len(all_skills))
+
         # Extract education section
         parsed['education'] = find_section(
             raw_text,
             ['education', 'academic', 'qualifications']
         )
-        
+
         # Extract experience section
         parsed['experience'] = find_section(
             raw_text,
             ['experience', 'work experience', 'professional experience', 'employment']
         )
-        
-        # Step 4: Compute heuristic score (resume structure quality)
+
+        # Step 5: Compute heuristic score (resume structure quality)
+        logger.info("Step 5: Computing heuristic score")
         heur_score, heur_feedback, heur_breakdown = compute_heuristics(
             raw_text,
             parsed,
             parsing_errors
         )
-        
-        # Step 5: Compute relevance score (if job description provided)
+        logger.info("Heuristic score: %.2f/50", heur_score)
+
+        # Step 6: Compute relevance score (if job description provided)
+        logger.info("Step 6: Computing relevance score (jd_provided=%s)", bool(job_description))
         relevance = None
         if job_description:
             relevance = ats_similarity_score_sbert(
@@ -148,9 +162,12 @@ async def parse_resume(
                 sbert_enabled=app.SBERT_ENABLED,
                 stop_words=app.STOP_WORDS
             )
-        
-        # Step 6: Normalize final score (0-100)
+            logger.info("Relevance score: %.4f", relevance)
+
+        # Step 7: Normalize final score (0-100)
+        logger.info("Step 7: Normalising final score")
         final_score, norm_breakdown = normalize_score(heur_score, relevance)
+        logger.info("Final ATS score: %.2f", final_score)
         
         # Step 7: Extract contact information
         contact = extract_contact_info(raw_text)
@@ -184,12 +201,9 @@ async def parse_resume(
         return result
     
     except Exception as e:
-        # Log error and return error response
+        # Log error and raise proper HTTP error (not a 200 with error body)
         traceback.print_exc()
-        return {
-            'error': 'Failed to parse',
-            'detail': str(e)
-        }
+        raise HTTPException(status_code=500, detail=f"Failed to parse resume: {str(e)}")
 
 
 @router.post('/semantic-similarity')
