@@ -45,12 +45,15 @@ SCORING BREAKDOWN (v4 - Strict & Equal):
    - <65 = Needs improvement
 """
 
+import logging
 from typing import Optional, Tuple, Dict, List, Any
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.utils.text_cleaner import clean_text, detect_formatting_risks
+
+logger = logging.getLogger(__name__)
 
 
 def compute_relevance_tfidf(resume_text: str, job_text: str) -> float:
@@ -149,7 +152,7 @@ def ats_similarity_score_sbert(resume_text: str, jd_text: str,
         return similarity
     
     except Exception as e:
-        print(f"SBERT similarity calculation failed: {e}")
+        logger.warning("SBERT similarity calculation failed: %s — falling back to TF-IDF", e)
         # Fallback to TF-IDF
         return compute_relevance_tfidf(resume_text, jd_text)
 
@@ -185,8 +188,10 @@ def compute_heuristics(text: str, parsed_sections: dict,
         - feedback (List[str]): List of feedback messages
         - breakdown (Dict[str, float]): Score breakdown by component
     """
-    from app.services.extractor import extract_skills_from_resume
-    from app.services.parser import extract_contact_info
+    from app.services.skill_extractor import extract_skills_from_resume
+    from app.services.resume_parser import extract_contact_info
+
+    logger.info("Computing heuristic score — sections available: %s", list(parsed_sections.keys()))
     
     score = 0.0
     feedback = []

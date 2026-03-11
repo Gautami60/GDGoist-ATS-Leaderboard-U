@@ -16,7 +16,13 @@ from app.models.response_schema import (
     ErrorResponse
 )
 
+from app.models.request_schema import (
+    ResumeScoreRequest,
+    ResumeTextRequest
+)
+
 __all__ = [
+    # Response schemas
     'ContactInfo',
     'ScoreBreakdown',
     'ModelInfo',
@@ -25,5 +31,8 @@ __all__ = [
     'SimilarityResponse',
     'DetailedSimilarityResponse',
     'HealthResponse',
-    'ErrorResponse'
+    'ErrorResponse',
+    # Request schemas
+    'ResumeScoreRequest',
+    'ResumeTextRequest',
 ]

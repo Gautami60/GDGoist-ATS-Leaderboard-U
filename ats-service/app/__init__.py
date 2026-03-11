@@ -13,10 +13,29 @@ Architecture:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
+import logging.config
 import nltk
 from nltk.corpus import stopwords
 
-# Global configuration
+from app.config import (
+    APP_TITLE,
+    APP_DESCRIPTION,
+    APP_VERSION,
+    ALLOWED_ORIGINS,
+)
+
+# ── Logging configuration ──────────────────────────────────────────
+# Configure once at package import time so all sub-module loggers
+# inherit this format and level automatically.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# Global state (populated by initialize_nlp_resources)
 SBERT_ENABLED = False
 sbert_model = None
 STOP_WORDS = set()
@@ -38,15 +57,14 @@ def initialize_nlp_resources():
         # Download stopwords if not already present
         nltk.download('stopwords', quiet=True)
         STOP_WORDS = set(stopwords.words('english'))
-        
+
         # SBERT model loading disabled on Windows due to Numpy compatibility issues
-        print("SBERT model loading disabled on Windows (Numpy compatibility)")
+        logger.info("SBERT model loading disabled on Windows (Numpy compatibility) — using TF-IDF")
         sbert_model = None
         SBERT_ENABLED = False
-        
+
     except Exception as e:
-        print(f"Warning: Could not initialize SBERT model: {e}")
-        print("Falling back to TF-IDF similarity")
+        logger.warning("Could not initialise NLP resources: %s — falling back to TF-IDF", e)
         STOP_WORDS = set()
         sbert_model = None
         SBERT_ENABLED = False
@@ -67,21 +85,19 @@ def create_app() -> FastAPI:
     Returns:
         FastAPI: Configured FastAPI application instance
     """
+    logger.info("Creating FastAPI application — %s v%s", APP_TITLE, APP_VERSION)
+
     # Create FastAPI app
     app = FastAPI(
-        title="ATS Service with TF-IDF",
-        description="Resume parsing and scoring service for Applicant Tracking System",
-        version="2.0.0"
+        title=APP_TITLE,
+        description=APP_DESCRIPTION,
+        version=APP_VERSION
     )
-    
-    # Configure CORS - allows frontend to communicate with this service
+
+    # Configure CORS — allows frontend to communicate with this service
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",  # Vite dev server
-            "http://localhost:3000",  # React dev server
-            "*"  # Allow all origins (adjust in production)
-        ],
+        allow_origins=ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],  # Allow all HTTP methods
         allow_headers=["*"],  # Allow all headers

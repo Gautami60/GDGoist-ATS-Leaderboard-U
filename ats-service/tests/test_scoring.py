@@ -1,9 +1,9 @@
 import sys
-sys.path.insert(0, '.')
+sys.path.insert(0, '..')
 
 from pdfminer.high_level import extract_text
-from app.services.parser import find_section, extract_contact_info, preprocess_pdf_text
-from app.services.scorer import compute_heuristics, normalize_score
+from app.services.resume_parser import find_section, extract_contact_info, preprocess_pdf_text
+from app.services.scoring_engine import compute_heuristics, normalize_score
 
 pdf_path = r'C:\Users\Lenovo\Documents\Shubhranshu Resume.pdf'
 text = extract_text(pdf_path)
