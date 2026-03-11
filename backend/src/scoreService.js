@@ -19,6 +19,7 @@ const Badge = require('./models/badge.model')
 const BadgeDefinition = require('./models/badgeDefinition.model')
 const Score = require('./models/score.model')
 const User = require('./models/user.model')
+const logger = require('./utils/logger')
 
 // FROZEN WEIGHTS - DO NOT MODIFY
 const WEIGHTS = {
@@ -184,7 +185,7 @@ async function recalculateUserScore(userId, options = {}) {
 
         return scoreDoc
     } catch (err) {
-        console.error(`Score recalculation error for user ${userId}:`, err.message)
+        logger.error('Score recalculation error', { userId, error: err.message })
         throw err
     }
 }

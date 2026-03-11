@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import API_BASE from '../services/api'
 
 const AuthContext = createContext()
 
@@ -9,8 +10,6 @@ export const useAuth = () => {
   }
   return context
 }
-
-const API_BASE = 'http://localhost:4000'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
