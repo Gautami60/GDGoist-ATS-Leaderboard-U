@@ -18,7 +18,7 @@ Available Endpoints:
 - POST /similarity: Direct similarity calculation (with metadata)
 """
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional, Dict, Any
 import logging
 import traceback
@@ -201,12 +201,9 @@ async def parse_resume(
         return result
     
     except Exception as e:
-        # Log error and return error response
+        # Log error and raise proper HTTP error (not a 200 with error body)
         traceback.print_exc()
-        return {
-            'error': 'Failed to parse',
-            'detail': str(e)
-        }
+        raise HTTPException(status_code=500, detail=f"Failed to parse resume: {str(e)}")
 
 
 @router.post('/semantic-similarity')

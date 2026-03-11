@@ -262,7 +262,7 @@ router.get('/users/:userId/profile', async (req, res, next) => {
                 bio: user.bio || '', profilePicture: finalAvatar, socialLinks: user.socialLinks || {},
                 projects: user.projects || [], experiences: user.experiences || [],
                 github: githubDoc ? { username: githubDoc.githubUsername } : (user.github?.username ? { username: user.github.username } : null),
-                score: latestScore ? { total: latestScore.totalScore, ats: latestScore.resumeScore, github: latestScore.githubScore, badges: latestScore.badgesScore } : null,
+                score: latestScore ? { total: latestScore.totalScore, ats: latestScore.atsComponent, github: latestScore.githubScore, badges: latestScore.badgesScore } : null,
                 badges: formattedBadges, isPrivate: false,
             },
         })

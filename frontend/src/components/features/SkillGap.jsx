@@ -45,7 +45,7 @@ export default function SkillGap() {
 
     setLoading(true)
     try {
-      const response = await apiCall('/skill-gap/analyze', {
+      const response = await apiCall('/skillgap', {
         method: 'POST',
         body: JSON.stringify({
           targetRole,

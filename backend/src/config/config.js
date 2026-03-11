@@ -23,7 +23,6 @@ module.exports = {
 
     // ── External Services ─────────────────────────────────────────
     ATS_SERVICE_URL: process.env.ATS_SERVICE_URL || 'http://localhost:8000',
-    SBERT_SERVICE_URL: process.env.SBERT_SERVICE_URL || 'http://localhost:8001',
 
     // ── AWS / S3 ──────────────────────────────────────────────────
     AWS_REGION: process.env.AWS_REGION || 'ap-south-1',

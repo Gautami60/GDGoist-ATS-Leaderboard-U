@@ -49,7 +49,7 @@ computing gzip size...
 [2mdist/[22m[32mindex.html                    [39m[1m[2m  0.43 kB[22m[1m[22m[2m Γöé gzip:   0.29 kB[22m
 [2mdist/[22m[32massets/gdg-logo-CcWCB2mS.png  [39m[1m[2m316.29 kB[22m[1m[22m
 [2mdist/[22m[35massets/index-D04H8ibR.css     [39m[1m[2m 33.17 kB[22m[1m[22m[2m Γöé gzip:   7.07 kB[22m
-[2mdist/[22m[36massets/index-CNVJtbso.js      [39m[1m[33m953.57 kB[39m[22m[2m Γöé gzip: 263.57 kB[22m
+[2mdist/[22m[36massets/index-zfdWXSi0.js      [39m[1m[33m953.53 kB[39m[22m[2m Γöé gzip: 263.53 kB[22m
 [33m
 (!) Some chunks are 
 larger than 500 kB 
@@ -68,4 +68,4 @@ ut-manualchunks
 limit for this warning 
 via build.chunkSizeWarn
 ingLimit.[39m
-[32mΓ£ô built in 4.05s[39m
+[32mΓ£ô built in 10.19s[39m

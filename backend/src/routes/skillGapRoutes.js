@@ -10,6 +10,7 @@ const router = express.Router()
 const { verifyToken } = require('../middleware/auth')
 const SkillGap = require('../models/skillgap.model')
 const { recalculateUserScore } = require('../scoreService')
+const { awardBadge } = require('../badges')
 
 // Get or create skill gap analysis
 router.get('/skillgap', verifyToken, async (req, res, next) => {
@@ -55,7 +56,7 @@ router.post('/skillgap', verifyToken, async (req, res, next) => {
         skillGap.lastAnalyzedAt = new Date()
         await skillGap.save()
 
-        await require('../badges').awardBadge(req.user.id, 'skill_seeker', { targetRole })
+        await awardBadge(req.user.id, 'skill_seeker', { targetRole })
         await recalculateUserScore(req.user.id)
 
         return res.json({ skillGap })

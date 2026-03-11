@@ -185,7 +185,7 @@ async function recalculateUserScore(userId, options = {}) {
 
         return scoreDoc
     } catch (err) {
-        console.error(`Score recalculation error for user ${userId}:`, err.message)
+        logger.error('Score recalculation error', { userId, error: err.message })
         throw err
     }
 }
