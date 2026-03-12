@@ -29,14 +29,14 @@ const Badge = require('../models/badge.model')
 const BadgeDefinition = require('../models/badgeDefinition.model')
 const GitHub = require('../models/github.model')
 const Score = require('../models/score.model')
-const { recalculateUserScore } = require('../scoreService')
+const { recalculateUserScore } = require('../services/scoring/scoreService')
 const {
     getCohortAnalytics, getSkillIntelligence, getAtRiskCohorts, getTrendAnalysis, getPlatformStats,
-} = require('../adminAnalytics')
+} = require('../services/analytics/adminAnalytics')
 const {
     executeRightToErasure, getConsentHistory, createAuditLog, getAuditLogs, exportUserData,
-} = require('../privacyService')
-const { withCache } = require('../analyticsCache')
+} = require('../services/privacy/privacyService')
+const { withCache } = require('../services/analytics/analyticsCache')
 const { uploadFile } = require('../infrastructure/s3')
 const logger = require('../utils/logger')
 

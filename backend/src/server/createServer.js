@@ -10,14 +10,28 @@
 const express = require('express')
 const cors = require('cors')
 const fileUpload = require('express-fileupload')
+const helmet = require('helmet')
 const path = require('path')
+const config = require('../config/config')
 const logger = require('../utils/logger')
 
 function createServer() {
     const app = express()
 
+    // ── Security headers ──────────────────────────────────────────
+    app.use(helmet())
+
+    // ── CORS ──────────────────────────────────────────────────────
+    const corsOptions = {
+        origin: config.NODE_ENV === 'production'
+            ? (config.ALLOWED_ORIGINS ? config.ALLOWED_ORIGINS.split(',') : [])
+            : '*',
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    }
+    app.use(cors(corsOptions))
+
     // ── Core middleware ───────────────────────────────────────────
-    app.use(cors())
     app.use(express.json())
     app.use(fileUpload())
     app.use('/uploads', express.static(path.join(__dirname, '../../uploads')))

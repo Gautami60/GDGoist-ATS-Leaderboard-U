@@ -5,10 +5,10 @@
  * Ensures GitHub scores stay up-to-date without manual intervention.
  */
 
-const GitHub = require('./models/github.model')
-const { syncGitHubData } = require('./github')
-const { recalculateUserScore } = require('./scoreService')
-const { checkAndAwardBadges } = require('./badges')
+const GitHub = require('../../models/github.model')
+const { syncGitHubData } = require('./githubApi')
+const { recalculateUserScore } = require('../scoring/scoreService')
+const { checkAndAwardBadges } = require('../badges/badgeService')
 
 // Sync interval: 24 hours (in milliseconds)
 const SYNC_INTERVAL = 24 * 60 * 60 * 1000
@@ -99,7 +99,7 @@ async function syncAllUsers() {
         console.log('[GitHub Sync] Starting batch sync for all users')
 
         // FIXED: Query User collection for github.connected flag
-        const User = require('./models/user.model')
+        const User = require('../../models/user.model')
         const connectedUsers = await User.find({
             'github.connected': true
         }).select('_id github')

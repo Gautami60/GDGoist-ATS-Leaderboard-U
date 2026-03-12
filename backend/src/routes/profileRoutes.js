@@ -29,9 +29,9 @@ const Score = require('../models/score.model')
 const Badge = require('../models/badge.model')
 const GitHub = require('../models/github.model')
 const { uploadFile, getFile } = require('../infrastructure/s3')
-const { recalculateUserScore } = require('../scoreService')
-const { analyticsCache } = require('../analyticsCache')
-const { exportUserData, executeRightToErasure, recordConsentEvent } = require('../privacyService')
+const { recalculateUserScore } = require('../services/scoring/scoreService')
+const { analyticsCache } = require('../services/analytics/analyticsCache')
+const { exportUserData, executeRightToErasure, recordConsentEvent } = require('../services/privacy/privacyService')
 const logger = require('../utils/logger')
 
 // Consent

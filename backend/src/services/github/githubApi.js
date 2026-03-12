@@ -1,14 +1,15 @@
 const axios = require('axios')
+const config = require('../../config/config')
 
 const GITHUB_API_BASE = 'https://api.github.com'
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || 'your_client_id'
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || 'your_client_secret'
+const GITHUB_CLIENT_ID = config.GITHUB_CLIENT_ID || 'your_client_id'
+const GITHUB_CLIENT_SECRET = config.GITHUB_CLIENT_SECRET || 'your_client_secret'
 
 // Get GitHub OAuth authorization URL
 function getAuthorizationUrl(state) {
   const params = new URLSearchParams({
     client_id: GITHUB_CLIENT_ID,
-    redirect_uri: process.env.GITHUB_REDIRECT_URI || 'http://localhost:5173/github-callback',
+    redirect_uri: config.GITHUB_CALLBACK_URL || 'http://localhost:5173/github-callback',
     scope: 'user:email read:user public_repo',
     state,
   })

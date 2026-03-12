@@ -14,7 +14,7 @@ const { verifyToken } = require('../middleware/auth')
 const { requireConsent } = require('../middleware/consent')
 const Resume = require('../models/resume.model')
 const { uploadFile, generateUploadUrl, getFile } = require('../infrastructure/s3')
-const { recalculateUserScore } = require('../scoreService')
+const { recalculateUserScore } = require('../services/scoring/scoreService')
 const { processResume } = require('../services/scoring/resumeProcessingService')
 const logger = require('../utils/logger')
 

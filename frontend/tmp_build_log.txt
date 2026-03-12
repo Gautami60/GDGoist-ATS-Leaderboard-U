@@ -68,4 +68,4 @@ ut-manualchunks
 limit for this warning 
 via build.chunkSizeWarn
 ingLimit.[39m
-[32mΓ£ô built in 10.19s[39m
+[32mΓ£ô built in 8.69s[39m

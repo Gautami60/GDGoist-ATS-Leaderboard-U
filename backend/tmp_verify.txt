@@ -1,0 +1,10 @@
+authRoutes: OK
+scoreRoutes: OK
+skillGapRoutes: OK
+resumeRoutes: OK
+profileRoutes: OK
+peerRoutes: OK
+githubRoutes: OK
+adminRoutes: OK
+badgeRoutes: OK
+registerRoutes: OK
