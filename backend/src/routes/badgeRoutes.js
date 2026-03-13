@@ -12,7 +12,7 @@ const router = express.Router()
 const { verifyToken } = require('../middleware/auth')
 const Badge = require('../models/badge.model')
 const BadgeDefinition = require('../models/badgeDefinition.model')
-const { getUserBadges, BADGE_DEFINITIONS, getBadgeProgress } = require('../services/badges/badgeService')
+const { getUserBadges, BADGE_DEFINITIONS, getBadgeProgress } = require('../badges')
 
 // Get user's earned badges
 router.get('/badges', verifyToken, async (req, res, next) => {

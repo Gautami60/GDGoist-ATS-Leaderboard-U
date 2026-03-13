@@ -14,8 +14,7 @@ const { verifyToken } = require('../middleware/auth')
 const User = require('../models/user.model')
 const Connection = require('../models/connection.model')
 const Score = require('../models/score.model')
-const { recalculateUserScore } = require('../services/scoring/scoreService')
-const { awardBadge } = require('../services/badges/badgeService')
+const { recalculateUserScore } = require('../scoreService')
 
 // Search peers by skills / name
 router.get('/peers/search', verifyToken, async (req, res, next) => {
@@ -133,7 +132,7 @@ router.post('/connections/:connectionId/respond', verifyToken, async (req, res, 
         if (action === 'accept') {
             const acceptedCount = await Connection.countDocuments({ recipient: req.user.id, status: 'accepted' })
             if (acceptedCount >= 10) {
-                await awardBadge(req.user.id, 'networking_ninja', { connections: acceptedCount })
+                await require('../badges').awardBadge(req.user.id, 'networking_ninja', { connections: acceptedCount })
                 await recalculateUserScore(req.user.id)
             }
         }

@@ -11,15 +11,11 @@
 
 require('dotenv').config()
 
-// Fail fast if required env vars are missing
-const { validate: validateEnv } = require('./config/envValidator')
-validateEnv()
-
 const { PORT } = require('./config/config')
 const { connect } = require('./infrastructure/db')
 const createServer = require('./server/createServer')
 const registerRoutes = require('./server/registerRoutes')
-const { startScheduler: startGitHubScheduler } = require('./services/github/githubScheduler')
+const { startScheduler: startGitHubScheduler } = require('./githubScheduler')
 const logger = require('./utils/logger')
 
 async function main() {

@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken')
 const User = require('../models/user.model')
-const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/config')
+
+const JWT_SECRET = process.env.JWT_SECRET || 'changeme'
 
 function generateToken(user) {
   const payload = { sub: user._id.toString(), role: user.role, name: user.name }
-  const opts = { expiresIn: JWT_EXPIRES_IN }
+  const opts = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   return jwt.sign(payload, JWT_SECRET, opts)
 }
 

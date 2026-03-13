@@ -3,23 +3,18 @@
  *
  * Single source of truth for all environment-level settings.
  * Import from here instead of reading process.env directly in route/service files.
- *
- * NOTE: envValidator.validate() is called at startup (in index.js) — not here,
- * to avoid circular dependency issues (validator imports logger which may
- * import config).
  */
 
 module.exports = {
     // ── Server ───────────────────────────────────────────────────
     PORT: process.env.PORT || 4000,
     NODE_ENV: process.env.NODE_ENV || 'development',
-    ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || null,
 
     // ── Database ─────────────────────────────────────────────────
     MONGO_URI: process.env.MONGO_URI,
 
     // ── Auth ─────────────────────────────────────────────────────
-    JWT_SECRET: process.env.JWT_SECRET,
+    JWT_SECRET: process.env.JWT_SECRET || 'changeme',
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
 
     // ── Domain / Admin ────────────────────────────────────────────
